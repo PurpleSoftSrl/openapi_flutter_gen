@@ -5,7 +5,7 @@ description: >-
   types, typed auth interceptors, multipart FormData support,
   pagination, and Isolate-based JSON deserialization — all
   with zero build_runner dependency in generated code.
-version: 0.2.0
+version: 0.2.1
 repository: https://github.com/PurpleSoftSrl/openapi_flutter_gen
 issue_tracker: https://github.com/PurpleSoftSrl/openapi_flutter_gen/issues
 topics:
