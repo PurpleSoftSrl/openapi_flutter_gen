@@ -67,8 +67,9 @@ class SwaggerNormalizer {
   /// Extracts inline enum property schemas as separate named schemas.
   /// E.g. Pet.status {type: string, enum: [...]} → PetStatus schema.
   static void _extractInlineEnums(Map<String, dynamic> target, String parentName, Map<String, dynamic> schema) {
-    final props = schema['properties'];
-    if (props is! Map<String, dynamic>) return;
+    final rawProps = schema['properties'];
+    if (rawProps is! Map<String, dynamic>) return;
+    final props = rawProps;
     for (final entry in props.entries) {
       if (entry.value is Map<String, dynamic>) {
         final prop = entry.value as Map<String, dynamic>;
@@ -76,9 +77,7 @@ class SwaggerNormalizer {
         if (prop.containsKey('enum') && !target.containsKey(propName)) {
           target[propName] = _convertPropertySchema(prop);
           // Replace inline enum with $ref
-          (props as Map<String, dynamic>)[entry.key] = {
-            r'$ref': '#/components/schemas/$propName',
-          };
+          props[entry.key] = {'\$ref': '#/components/schemas/$propName'};
         }
       }
     }
