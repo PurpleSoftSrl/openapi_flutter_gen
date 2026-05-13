@@ -81,11 +81,11 @@ environment:
   sdk: '>=3.4.0 <4.0.0'
 
 dependencies:
-  dio: any
-  collection: any
+  dio: ^5.7.0
+  collection: ^1.19.0
 
 dev_dependencies:
-  lints: any
-  test: any
+  lints: ^4.0.0
+  test: ^1.25.0
 ''';
 }
