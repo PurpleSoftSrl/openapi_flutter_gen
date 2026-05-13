@@ -52,7 +52,7 @@ class ModelGenerator {
       buf.writeln('import \'package:dio/dio.dart\';');
     }
     for (final imp in imports.toList()..sort()) {
-      buf.writeln('import \'${imp}.dart\';');
+      buf.writeln('import \'${imp.toLowerCase()}.dart\';');
     }
 
     buf.writeln();
@@ -378,7 +378,7 @@ class ModelGenerator {
       buf.writeln("import 'dart:typed_data';");
     }
     for (final imp in imports.toList()..sort()) {
-      buf.writeln("import '${imp}.dart';");
+      buf.writeln("import '${imp.toLowerCase()}.dart';");
     }
     buf.writeln("import 'dart:convert';");
     buf.writeln();

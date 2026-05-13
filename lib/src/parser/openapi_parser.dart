@@ -47,7 +47,6 @@ class OpenApiSpecParser {
   }
 
   void _parseAllSchemas() {
-    // Extract inline object/enum schemas from properties before parsing
     _extractInlineSchemasFromRaw();
     
     for (final entry in _schemasRaw.entries) {
@@ -56,6 +55,13 @@ class OpenApiSpecParser {
       if (schemaJson is! Map<String, dynamic>) continue;
       if (!_schemas.containsKey(name)) {
         _schemas[name] = _parseSchema(name, schemaJson);
+      }
+    }
+    // Resolve refs that were created before their schemas were extracted
+    for (final entry in _schemasRaw.entries) {
+      final name = entry.key;
+      if (!_schemas.containsKey(name)) {
+        _schemas[name] = _parseSchema(name, entry.value as Map<String, dynamic>);
       }
     }
     for (final schema in _schemas.values) {
@@ -73,9 +79,12 @@ class OpenApiSpecParser {
       _extractFromSchema(schema, entry.key, toAdd);
     }
     _schemasRaw.addAll(toAdd);
-    // Also add to _doc so $ref resolution works for extracted schemas
-    if (_components['schemas'] is Map<String, dynamic>) {
-      (_components['schemas'] as Map<String, dynamic>).addAll(toAdd);
+    // Add to _doc directly (not _components which may be a copy from YAML parsing)
+    final docComp = _doc['components'] as Map<String, dynamic>?;
+    if (docComp != null) {
+      final docSchemas = (docComp['schemas'] as Map<String, dynamic>?) ?? {};
+      docSchemas.addAll(toAdd);
+      docComp['schemas'] = docSchemas;
     }
     if (toAdd.isNotEmpty) _extractInlineSchemasFromRaw();
   }
@@ -90,8 +99,8 @@ class OpenApiSpecParser {
         _extractProperty(prop, props, propEntry.key, parentName, toAdd);
       }
     }
-    // Extract from oneOf/anyOf — items become separate schemas
-    for (final key in ['oneOf', 'anyOf']) {
+    // Extract from oneOf/anyOf/allOf — items become separate schemas
+    for (final key in ['oneOf', 'anyOf', 'allOf']) {
       final list = schema[key];
       if (list is List) {
         for (var i = 0; i < list.length; i++) {
