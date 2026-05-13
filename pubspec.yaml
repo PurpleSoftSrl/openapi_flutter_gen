@@ -1,0 +1,32 @@
+name: openapi_flutter_gen
+description: >-
+  High-performance OpenAPI-to-Dart/Flutter code generator.
+  Produces immutable models, sealed-class exhaustive response
+  types, typed auth interceptors, multipart FormData support,
+  pagination, and Isolate-based JSON deserialization — all
+  with zero build_runner dependency in generated code.
+version: 0.1.0
+repository: https://github.com/PurpleSoftSrl/openapi_flutter_gen
+issue_tracker: https://github.com/PurpleSoftSrl/openapi_flutter_gen/issues
+topics:
+  - openapi
+  - swagger
+  - codegen
+  - api
+  - flutter
+
+environment:
+  sdk: ^3.4.0
+
+dependencies:
+  yaml: ^3.1.0
+  args: ^2.5.0
+  path: ^1.9.0
+
+dev_dependencies:
+  lints: ^4.0.0
+  test: ^1.25.0
+
+executables:
+  openapi_flutter_gen: main
+
