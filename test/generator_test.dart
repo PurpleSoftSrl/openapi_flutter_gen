@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:openapi_flutter_gen/src/parser/openapi_parser.dart';
+import 'package:openapi_flutter_gen/src/parser/swagger_normalizer.dart';
 import 'package:openapi_flutter_gen/src/ir/ir.dart';
 import 'package:openapi_flutter_gen/src/generator/generator.dart';
 import 'package:openapi_flutter_gen/src/generator/dart/model_generator.dart';
@@ -406,6 +407,41 @@ void main() {
       } finally {
         tempDir.deleteSync(recursive: true);
       }
+    });
+
+    group('Swagger 2.0', () {
+      test('normalizes Swagger 2.0 Petstore from petstore.swagger.io', () async {
+        final swaggerPath = p.normalize(
+          p.join(p.current, '..', 'test_specs', 'petstore_swagger.json'),
+        );
+        final swaggerJson = json.decode(
+          await File(swaggerPath).readAsString(),
+        ) as Map<String, dynamic>;
+
+        final normalized = SwaggerNormalizer.normalize(swaggerJson);
+
+        expect(normalized['openapi'], '3.0.0');
+        expect(normalized['servers'], isNotEmpty);
+        expect(normalized['components'], isNotNull);
+        expect(
+          (normalized['components'] as Map)['schemas'],
+          isNotEmpty,
+        );
+
+        final parser = OpenApiSpecParser(normalized);
+        final doc = parser.parse();
+
+        expect(doc.schemas, isNotEmpty,
+            reason: 'Swagger 2.0 schemas should be parsed');
+        expect(doc.operations, isNotEmpty,
+            reason: 'Swagger 2.0 operations should be parsed');
+      });
+
+      test('does not modify OAS 3.x documents', () {
+        final result = SwaggerNormalizer.normalize(petstoreJson);
+        expect(result, same(petstoreJson),
+            reason: 'OAS 3.x should pass through unchanged');
+      });
     });
   });
 }

@@ -1,3 +1,8 @@
+## 0.1.1
+
+- Swagger 2.0 / OpenAPI 2.0 support via SwaggerNormalizer (definitions → components/schemas, host+basePath → servers, body params → requestBody, securityDefinitions → securitySchemes)
+- 2 new Swagger 2.0 integration tests using official petstore.swagger.io spec
+
 ## 0.1.0
 
 - Initial release

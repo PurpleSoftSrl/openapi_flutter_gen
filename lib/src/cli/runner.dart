@@ -1,5 +1,6 @@
 import '../parser/loader.dart';
 import '../parser/openapi_parser.dart';
+import '../parser/swagger_normalizer.dart';
 import '../generator/generator.dart';
 
 class Runner {
@@ -16,8 +17,10 @@ class Runner {
         ? await loadSpecFromUrl(specUrl)
         : await loadSpec(specPath);
 
+    final normalized = SwaggerNormalizer.normalize(specJson);
+
     print('Parsing OpenAPI spec...');
-    final parser = OpenApiSpecParser(specJson);
+    final parser = OpenApiSpecParser(normalized);
     final apiDoc = parser.parse();
 
     print('Parsed: ${apiDoc.schemas.length} schemas, ${apiDoc.operations.length} operations');
