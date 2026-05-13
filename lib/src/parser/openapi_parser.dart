@@ -184,19 +184,35 @@ class OpenApiSpecParser {
       }
 
       if (schemaJson.containsKey('oneOf')) {
-        return _parseUnion(name, schemaJson, isAnyOf: false);
+        final result = _parseUnion(name, schemaJson, isAnyOf: false);
+        if (!_schemas.containsKey(name)) {
+          _schemas[name] = result;
+        }
+        return result;
       }
 
       if (schemaJson.containsKey('anyOf')) {
-        return _parseUnion(name, schemaJson, isAnyOf: true);
+        final result = _parseUnion(name, schemaJson, isAnyOf: true);
+        if (!_schemas.containsKey(name)) {
+          _schemas[name] = result;
+        }
+        return result;
       }
 
       if (schemaJson.containsKey('allOf')) {
-        return _parseAllOf(name, schemaJson);
+        final result = _parseAllOf(name, schemaJson);
+        if (!_schemas.containsKey(name)) {
+          _schemas[name] = result;
+        }
+        return result;
       }
 
       if (type == 'object' || schemaJson.containsKey('properties') || schemaJson.containsKey('additionalProperties')) {
-        return _parseObject(name, schemaJson);
+        final result = _parseObject(name, schemaJson);
+        if (!_schemas.containsKey(name)) {
+          _schemas[name] = result;
+        }
+        return result;
       }
 
       if (type == 'array') {
