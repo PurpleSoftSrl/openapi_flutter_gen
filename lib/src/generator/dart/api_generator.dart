@@ -169,7 +169,7 @@ class ApiGenerator {
       final paramName = _bodyParamName(op);
       final isRequired = op.requestBody!.isRequired;
       final bodySchema = op.requestBody!.content.values.first.schema;
-      final needsToJson = bodySchema is IrObjectSchema || bodySchema is IrRefSchema || bodySchema is IrEnumSchema || bodySchema is IrUnionSchema || bodySchema is IrListSchema || bodySchema is IrMapSchema;
+      final needsToJson = _needsToJson(bodySchema);
 
       if (isMultipart) {
         final suffix = isRequired ? '.toFormData()' : '?.toFormData()';
@@ -177,9 +177,14 @@ class ApiGenerator {
       } else if (isBinary && bodySchema is IrPrimitiveSchema) {
         buf.writeln('      data: Stream.fromIterable([${paramName ?? 'body'}]),');
       } else {
-        final suffix = needsToJson
-            ? (isRequired ? '.toJson()' : '?.toJson()')
-            : '';
+        String suffix;
+        if (needsToJson && bodySchema is IrListSchema) {
+          suffix = isRequired ? '.map((e) => e.toJson()).toList()' : '?.map((e) => e.toJson()).toList()';
+        } else if (needsToJson) {
+          suffix = isRequired ? '.toJson()' : '?.toJson()';
+        } else {
+          suffix = '';
+        }
         buf.writeln('      data: ${paramName != null ? '$paramName$suffix' : 'null'},');
       }
     }
@@ -383,7 +388,7 @@ class ApiGenerator {
       if (defaultSchema != null) {
         buf.writeln('      _ => ${className}HttpDefault(${_fromJsonExpr('response.data', defaultSchema)}),');
       } else {
-        buf.writeln('      _ => const ${className}HttpDefault(response.data),');
+        buf.writeln('      _ => ${className}HttpDefault(response.data),');
       }
     } else {
       buf.writeln('      _ => ${className}Error.fromResponse(response),');
@@ -394,10 +399,8 @@ class ApiGenerator {
   }
 
   static void _generateResultVariant(StringBuffer buf, IrResponse resp, String parentName) {
-    final status = resp.statusCode;
-    if (status == 'default') return;
-
-    final variantName = '${parentName}Http$status';
+    final statusName = resp.statusCode == 'default' ? 'Default' : resp.statusCode;
+    final variantName = '${parentName}Http$statusName';
     final mt = resp.content.values.firstOrNull;
     final schema = mt?.schema;
 
@@ -514,8 +517,8 @@ class ApiGenerator {
       buf.writeln('    if (errorHandler != null) _addInterceptor(errorHandler!);');
       for (final entry in securitySchemes.entries) {
         final camelName = sanitizeFieldName(entry.key);
-        buf.writeln('    final securityCopy = $camelName;');
-        buf.writeln('    if (securityCopy != null) _addInterceptor(securityCopy.createInterceptor());');
+        buf.writeln('    final ${camelName}Copy = $camelName;');
+        buf.writeln('    if (${camelName}Copy != null) _addInterceptor(${camelName}Copy.createInterceptor());');
       }
       buf.writeln('    if (interceptors != null) _addInterceptors(interceptors!);');
       buf.writeln('  }');
@@ -552,8 +555,8 @@ class ApiGenerator {
     buf.writeln('      if (errorHandler != null) _addInterceptor(errorHandler!);');
     for (final entry in securitySchemes.entries) {
       final camelName = sanitizeFieldName(entry.key);
-      buf.writeln('      final securityCopy = $camelName;');
-      buf.writeln('      if (securityCopy != null) _addInterceptor(securityCopy.createInterceptor());');
+      buf.writeln('      final ${camelName}Copy = $camelName;');
+      buf.writeln('      if (${camelName}Copy != null) _addInterceptor(${camelName}Copy.createInterceptor());');
     }
     buf.writeln('      if (interceptors != null) _addInterceptors(interceptors!);');
     buf.writeln('    }');
@@ -599,5 +602,18 @@ class ApiGenerator {
     buf.writeln('    _ => throw FormatException(\'Unknown status code: \$statusCode\', data),');
     buf.writeln('  };');
     buf.writeln('}');
+  }
+
+  static bool _needsToJson(IrSchema? schema) {
+    if (schema == null) return false;
+    switch (schema) {
+      case IrObjectSchema(): return true;
+      case IrRefSchema(): return true;
+      case IrEnumSchema(): return true;
+      case IrUnionSchema(): return true;
+      case IrListSchema(): return _needsToJson(schema.items);
+      case IrMapSchema(): return _needsToJson(schema.values);
+      default: return false;
+    }
   }
 }

@@ -56,10 +56,38 @@ class SwaggerNormalizer {
     final result = <String, dynamic>{};
     for (final entry in definitions.entries) {
       if (entry.value is Map<String, dynamic>) {
-        result[entry.key] = _convertPropertySchema(entry.value as Map<String, dynamic>);
+        final schema = entry.value as Map<String, dynamic>;
+        result[entry.key] = _convertPropertySchema(schema);
+        _extractInlineEnums(result, entry.key, schema);
       }
     }
     return result;
+  }
+
+  /// Extracts inline enum property schemas as separate named schemas.
+  /// E.g. Pet.status {type: string, enum: [...]} → PetStatus schema.
+  static void _extractInlineEnums(Map<String, dynamic> target, String parentName, Map<String, dynamic> schema) {
+    final props = schema['properties'];
+    if (props is! Map<String, dynamic>) return;
+    for (final entry in props.entries) {
+      if (entry.value is Map<String, dynamic>) {
+        final prop = entry.value as Map<String, dynamic>;
+        final propName = _toPascalCase(entry.key);
+        if (prop.containsKey('enum') && !target.containsKey(propName)) {
+          target[propName] = _convertPropertySchema(prop);
+          // Replace inline enum with $ref
+          (props as Map<String, dynamic>)[entry.key] = {
+            r'$ref': '#/components/schemas/$propName',
+          };
+        }
+      }
+    }
+  }
+
+  static String _toPascalCase(String s) {
+    if (s.isEmpty) return s;
+    return s.split(RegExp(r'[_\-\s]+')).map((p) =>
+      p.isEmpty ? '' : p[0].toUpperCase() + p.substring(1)).join();
   }
 
   static Map<String, dynamic> _convertPropertySchema(Map<String, dynamic> schema) {
