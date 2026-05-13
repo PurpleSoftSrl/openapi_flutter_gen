@@ -60,7 +60,10 @@ class ModelGenerator {
     final className = sanitizeClassName(schema.name);
 
     buf.writeln('class $className {');
-    buf.writeln('  const $className({');
+    if (allProps.isEmpty) {
+      buf.writeln('  const $className();');
+    } else {
+      buf.writeln('  const $className({');
 
     for (final prop in allProps) {
       final isRequired = prop.isRequired && !prop.isNullable;
@@ -75,12 +78,12 @@ class ModelGenerator {
     }
 
     buf.writeln('  });');
+    }
     buf.writeln();
 
     for (final prop in allProps) {
       final typeStr = _propertyDartType(prop);
       final fieldName = sanitizeFieldName(prop.name);
-      final jsonKey = prop.jsonKey ?? prop.name;
       buf.writeln('  final $typeStr $fieldName;');
     }
     buf.writeln();
@@ -183,6 +186,14 @@ class ModelGenerator {
   }
 
   static void _generateCopyWith(StringBuffer buf, List<IrProperty> allProps, String className) {
+    if (allProps.isEmpty) {
+      buf.writeln('  $className copyWith() {');
+      buf.writeln('    return this;');
+      buf.writeln('  }');
+      buf.writeln();
+      return;
+    }
+
     buf.writeln('  $className copyWith({');
 
     for (final prop in allProps) {

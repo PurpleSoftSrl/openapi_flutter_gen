@@ -149,6 +149,10 @@ class OpenApiSpecParser {
       _schemas[schema.name] = schema;
     } else if (schema is IrUnionSchema && !_schemas.containsKey(schema.name)) {
       _schemas[schema.name] = schema;
+    } else if (schema is IrListSchema) {
+      _registerInlineSchema(schema.items);
+    } else if (schema is IrMapSchema) {
+      _registerInlineSchema(schema.values);
     }
   }
 
