@@ -388,7 +388,7 @@ class ApiGenerator {
       if (defaultSchema != null) {
         buf.writeln('      _ => ${className}HttpDefault(${_fromJsonExpr('response.data', defaultSchema)}),');
       } else {
-        buf.writeln('      _ => ${className}HttpDefault(),');
+        buf.writeln('      _ => const ${className}HttpDefault(),');
       }
     } else {
       buf.writeln('      _ => ${className}Error.fromResponse(response),');
@@ -443,10 +443,10 @@ class ApiGenerator {
         return '${sanitizeClassName(schema.refName)}.fromJson($expr as Map<String, dynamic>)';
       case IrListSchema():
         if (schema.items is IrObjectSchema) {
-          return 'List<${sanitizeClassName((schema.items as IrObjectSchema).name)}>.generate(($expr as List).length, (i) => ${sanitizeClassName((schema.items as IrObjectSchema).name)}.fromJson(($expr as List<dynamic>)[i] as Map<String, dynamic>), growable: false)';
+          return 'List<${sanitizeClassName((schema.items as IrObjectSchema).name)}>.generate($expr.length, (i) => ${sanitizeClassName((schema.items as IrObjectSchema).name)}.fromJson(($expr as List)[i]), growable: false)';
         }
         if (schema.items is IrRefSchema) {
-          return 'List<${sanitizeClassName((schema.items as IrRefSchema).refName)}>.generate(($expr as List).length, (i) => ${sanitizeClassName((schema.items as IrRefSchema).refName)}.fromJson(($expr as List<dynamic>)[i] as Map<String, dynamic>), growable: false)';
+          return 'List<${sanitizeClassName((schema.items as IrRefSchema).refName)}>.generate($expr.length, (i) => ${sanitizeClassName((schema.items as IrRefSchema).refName)}.fromJson(($expr as List)[i]), growable: false)';
         }
         return expr;
       case IrPrimitiveSchema(type: IrPrimitiveType.integer):

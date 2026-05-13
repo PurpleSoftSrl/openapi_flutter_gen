@@ -410,6 +410,36 @@ void main() {
       }
     });
 
+    test('OAS 3.x petstore with compute compiles', () async {
+      final tempDir = Directory.systemTemp.createTempSync('oafg_comp_');
+      try {
+        final generator = CodeGenerator(
+          doc: apiDoc,
+          outputDir: tempDir.path,
+          packageName: 'petstore_compute',
+          useIsolates: false,
+          useCompute: true,
+        );
+        await generator.generate();
+
+        final clientDir = p.join(tempDir.path, 'petstore_compute');
+        final pubGet = await Process.run(
+          'dart', ['pub', 'get'],
+          workingDirectory: clientDir,
+        );
+        expect(pubGet.exitCode, 0,
+            reason: 'dart pub get failed:\n${pubGet.stderr}');
+        final analyze = await Process.run(
+          'dart', ['analyze'],
+          workingDirectory: clientDir,
+        );
+        expect(analyze.exitCode, 0,
+            reason: 'dart analyze failed:\n${analyze.stderr}\n${analyze.stdout}');
+      } finally {
+        tempDir.deleteSync(recursive: true);
+      }
+    });
+
     group('Swagger 2.0', () {
       test('normalizes Swagger 2.0 Petstore from petstore.swagger.io', () async {
         final swaggerPath = p.normalize(
@@ -485,6 +515,47 @@ void main() {
         expect(result, same(petstoreJson),
             reason: 'OAS 3.x should pass through unchanged');
       });
+
+      test('Swagger 2.0 generated client with compute compiles', () async {
+        final swaggerPath = p.normalize(
+          p.join(p.current, '..', 'test_specs', 'petstore_swagger.json'),
+        );
+        final swaggerJson = json.decode(
+          await File(swaggerPath).readAsString(),
+        ) as Map<String, dynamic>;
+
+        final normalized = SwaggerNormalizer.normalize(swaggerJson);
+        final parser = OpenApiSpecParser(normalized);
+        final doc = parser.parse();
+
+        final tempDir = Directory.systemTemp.createTempSync('oafg_swc_');
+        try {
+          final generator = CodeGenerator(
+            doc: doc,
+            outputDir: tempDir.path,
+            packageName: 'petstore_client',
+            useIsolates: false,
+            useCompute: true,
+          );
+          await generator.generate();
+
+          final clientDir = p.join(tempDir.path, 'petstore_client');
+          final pubGet = await Process.run(
+            'dart', ['pub', 'get'],
+            workingDirectory: clientDir,
+          );
+          expect(pubGet.exitCode, 0,
+              reason: 'dart pub get failed:\n${pubGet.stderr}');
+          final analyze = await Process.run(
+            'dart', ['analyze'],
+            workingDirectory: clientDir,
+          );
+          expect(analyze.exitCode, 0,
+              reason: 'dart analyze failed:\n${analyze.stderr}\n${analyze.stdout}');
+        } finally {
+          tempDir.deleteSync(recursive: true);
+        }
+      });
     });
 
     group('Train Travel API (OAS 3.1 YAML)', () {
@@ -525,6 +596,45 @@ void main() {
           );
           expect(analyze.exitCode, 0,
               reason: 'dart analyze failed (exit code ${analyze.exitCode}):\n${analyze.stderr}\n${analyze.stdout}');
+        } finally {
+          tempDir.deleteSync(recursive: true);
+        }
+      });
+
+      test('train-travel YAML with compute compiles', () async {
+        final specPath = p.normalize(
+          p.join(p.current, '..', 'test_specs', 'train_travel.yaml'),
+        );
+        final specJson = await loadSpec(specPath);
+        final parser = OpenApiSpecParser(specJson);
+        final doc = parser.parse();
+        expect(doc.schemas, isNotEmpty);
+        expect(doc.operations, isNotEmpty);
+
+        final tempDir = Directory.systemTemp.createTempSync('oafg_trainc_');
+        try {
+          final generator = CodeGenerator(
+            doc: doc,
+            outputDir: tempDir.path,
+            packageName: 'train_travel_client',
+            useIsolates: false,
+            useCompute: true,
+          );
+          await generator.generate();
+
+          final clientDir = p.join(tempDir.path, 'train_travel_client');
+          final pubGet = await Process.run(
+            'dart', ['pub', 'get'],
+            workingDirectory: clientDir,
+          );
+          expect(pubGet.exitCode, 0,
+              reason: 'dart pub get failed:\n${pubGet.stderr}');
+          final analyze = await Process.run(
+            'dart', ['analyze'],
+            workingDirectory: clientDir,
+          );
+          expect(analyze.exitCode, 0,
+              reason: 'dart analyze failed:\n${analyze.stderr}\n${analyze.stdout}');
         } finally {
           tempDir.deleteSync(recursive: true);
         }

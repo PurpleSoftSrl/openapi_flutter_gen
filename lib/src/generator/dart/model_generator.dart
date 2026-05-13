@@ -563,7 +563,7 @@ class ModelGenerator {
       case IrListSchema():
         if (schema.items is IrObjectSchema || schema.items is IrRefSchema) {
           final itemName = _propertyImportName(schema.items) ?? 'Object';
-          return 'List<$itemName>.generate(($expr as List).length, (i) => $itemName.fromJson(($expr as List<dynamic>)[i] as Map<String, dynamic>), growable: false)';
+          return 'List<$itemName>.generate($expr.length, (i) => $itemName.fromJson(($expr as List)[i]), growable: false)';
         }
         if (schema.items is IrEnumSchema) {
           final enumName = sanitizeClassName((schema.items as IrEnumSchema).name);
@@ -571,12 +571,12 @@ class ModelGenerator {
           return 'List<$enumName>.generate(($expr as List).length, (i) => $enumName.fromJson(($expr as List<dynamic>)[i] as $enumType), growable: false)';
         }
         final inner = schemaToDartType(schema.items);
-        return '($expr as List).cast<$inner>()';
+        return '$expr as List<$inner>';
       case IrMapSchema():
         final valSchema = schema.values;
         if (valSchema is IrObjectSchema || valSchema is IrRefSchema) {
           final valName = _propertyImportName(valSchema) ?? 'Object';
-          return '($expr as Map<String, dynamic>).map((k, v) => MapEntry(k, $valName.fromJson(v as Map<String, dynamic>)))';
+          return '($expr as Map<String, dynamic>).map((k, v) => MapEntry(k, $valName.fromJson(v)))';
         }
         return '$expr as Map<String, ${schemaToDartType(schema.values)}>';
     }
