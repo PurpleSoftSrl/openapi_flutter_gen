@@ -40,7 +40,7 @@ Or add to your project's `dev_dependencies`:
 
 ```yaml
 dev_dependencies:
-  openapi_flutter_gen: ^0.2.0
+  openapi_flutter_gen: ^0.2.2
 ```
 
 ---
