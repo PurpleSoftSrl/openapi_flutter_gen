@@ -66,9 +66,14 @@ String generateFileHeader() {
 }
 
 String generatePubspecContent(String packageName, String description) {
+  final safe = description
+      .replaceAll(RegExp(r'[\r\n]+'), ' ')
+      .replaceAll("'", "''")
+      .trim();
+  final safeDesc = safe.length > 120 ? '${safe.substring(0, 117)}...' : safe;
   return '''
 name: $packageName
-description: $description
+description: '$safeDesc'
 version: 0.1.0
 publish_to: none
 

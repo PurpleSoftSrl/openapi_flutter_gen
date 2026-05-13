@@ -57,16 +57,15 @@ class SwaggerNormalizer {
     for (final entry in definitions.entries) {
       if (entry.value is Map<String, dynamic>) {
         final schema = entry.value as Map<String, dynamic>;
-        _extractInlineEnums(result, entry.key, schema);
+        _extractInlineSchemas(result, entry.key, schema);
         result[entry.key] = _convertPropertySchema(schema);
       }
     }
     return result;
   }
 
-  /// Extracts inline enum property schemas as separate named schemas.
-  /// E.g. Pet.status {type: string, enum: [...]} → PetStatus schema.
-  static void _extractInlineEnums(Map<String, dynamic> target, String parentName, Map<String, dynamic> schema) {
+  /// Extracts inline enum and object property schemas as separate named schemas.
+  static void _extractInlineSchemas(Map<String, dynamic> target, String parentName, Map<String, dynamic> schema) {
     final rawProps = schema['properties'];
     if (rawProps is! Map<String, dynamic>) return;
     final props = rawProps;
@@ -74,10 +73,12 @@ class SwaggerNormalizer {
       if (entry.value is Map<String, dynamic>) {
         final prop = entry.value as Map<String, dynamic>;
         final propName = _toPascalCase(entry.key);
-        final enumName = '${parentName}$propName';
-        if (prop.containsKey('enum') && !target.containsKey(enumName)) {
-          target[enumName] = _convertPropertySchema(prop);
-          props[entry.key] = {'\$ref': '#/components/schemas/$enumName'};
+        final inlineName = '${parentName}$propName';
+        final shouldExtract = prop.containsKey('enum') ||
+            ((prop['type'] == 'object' || prop.containsKey('properties')) && !prop.containsKey(r'$ref'));
+        if (shouldExtract && !target.containsKey(inlineName)) {
+          target[inlineName] = _convertPropertySchema(prop);
+          props[entry.key] = {'\$ref': '#/components/schemas/$inlineName'};
         }
       }
     }

@@ -47,6 +47,9 @@ class OpenApiSpecParser {
   }
 
   void _parseAllSchemas() {
+    // Extract inline object/enum schemas from properties before parsing
+    _extractInlineSchemasFromRaw();
+    
     for (final entry in _schemasRaw.entries) {
       final name = entry.key;
       final schemaJson = entry.value;
@@ -60,6 +63,31 @@ class OpenApiSpecParser {
         _resolveAllOfRefs(schema);
       }
     }
+  }
+
+  void _extractInlineSchemasFromRaw() {
+    final toAdd = <String, Map<String, dynamic>>{};
+    for (final entry in Map.of(_schemasRaw).entries) {
+      if (entry.value is! Map<String, dynamic>) continue;
+      final schema = entry.value as Map<String, dynamic>;
+      final props = schema['properties'];
+      if (props is! Map<String, dynamic>) continue;
+      for (final propEntry in Map.of(props).entries) {
+        if (propEntry.value is! Map<String, dynamic>) continue;
+        final prop = propEntry.value as Map<String, dynamic>;
+        final propName = _toPascalCase(propEntry.key);
+        final inlineName = '${entry.key}$propName';
+        final isInlineObj = (prop['type'] == 'object' || prop.containsKey('properties')) &&
+            !prop.containsKey(r'$ref');
+        final isInlineEnum = prop.containsKey('enum');
+        final shouldExtract = isInlineObj || isInlineEnum;
+        if (shouldExtract && !_schemasRaw.containsKey(inlineName) && !_schemasRaw.containsKey(propName)) {
+          toAdd[inlineName] = Map.of(prop);
+          props[propEntry.key] = {r'$ref': '#/components/schemas/$inlineName'};
+        }
+      }
+    }
+    _schemasRaw.addAll(toAdd);
   }
 
   IrSchema _parseSchema(String name, Map<String, dynamic> schemaJson) {

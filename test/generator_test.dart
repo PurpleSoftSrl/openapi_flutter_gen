@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:openapi_flutter_gen/src/parser/loader.dart';
 import 'package:openapi_flutter_gen/src/parser/openapi_parser.dart';
 import 'package:openapi_flutter_gen/src/parser/swagger_normalizer.dart';
 import 'package:openapi_flutter_gen/src/ir/ir.dart';
@@ -483,6 +484,50 @@ void main() {
         final result = SwaggerNormalizer.normalize(petstoreJson);
         expect(result, same(petstoreJson),
             reason: 'OAS 3.x should pass through unchanged');
+      });
+    });
+
+    group('Train Travel API (OAS 3.1 YAML)', () {
+      test('train-travel YAML generated client compiles with dart analyze', () async {
+        final specPath = p.normalize(
+          p.join(p.current, '..', 'test_specs', 'train_travel.yaml'),
+        );
+        final specJson = await loadSpec(specPath);
+
+        final parser = OpenApiSpecParser(specJson);
+        final doc = parser.parse();
+
+        expect(doc.schemas, isNotEmpty);
+        expect(doc.operations, isNotEmpty);
+
+        final tempDir = Directory.systemTemp.createTempSync('oafg_train_');
+        try {
+          final generator = CodeGenerator(
+            doc: doc,
+            outputDir: tempDir.path,
+            packageName: 'train_travel_client',
+            useIsolates: false,
+          );
+          await generator.generate();
+
+          final clientDir = p.join(tempDir.path, 'train_travel_client');
+
+          final pubGet = await Process.run(
+            'dart', ['pub', 'get'],
+            workingDirectory: clientDir,
+          );
+          expect(pubGet.exitCode, 0,
+              reason: 'dart pub get failed:\n${pubGet.stderr}');
+
+          final analyze = await Process.run(
+            'dart', ['analyze'],
+            workingDirectory: clientDir,
+          );
+          expect(analyze.exitCode, 0,
+              reason: 'dart analyze failed:\n${analyze.stderr}\n${analyze.stdout}');
+        } finally {
+          tempDir.deleteSync(recursive: true);
+        }
       });
     });
   });
