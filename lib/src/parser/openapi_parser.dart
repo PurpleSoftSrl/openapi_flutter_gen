@@ -87,7 +87,7 @@ class OpenApiSpecParser {
         _extractProperty(prop, props, propEntry.key, parentName, toAdd);
       }
     }
-    // Extract from oneOf/anyOf/allOf
+    // Extract from oneOf/anyOf/allOf — items become separate schemas
     for (final key in ['oneOf', 'anyOf', 'allOf']) {
       final list = schema[key];
       if (list is List) {
@@ -108,7 +108,7 @@ class OpenApiSpecParser {
     for (final propEntry in Map.of(props is Map ? props : <String, dynamic>{}).entries) {
       if (propEntry.value is! Map<String, dynamic>) continue;
       final prop = propEntry.value as Map<String, dynamic>;
-      for (final key in ['oneOf', 'anyOf', 'allOf']) {
+      for (final key in ['allOf']) {
         final list = prop[key];
         if (list is List) {
           for (var i = 0; i < list.length; i++) {
@@ -155,6 +155,8 @@ class OpenApiSpecParser {
   bool _isExtractable(Map<String, dynamic> prop) {
     if (prop.containsKey(r'$ref')) return false;
     if (prop.containsKey('enum')) return true;
+    if (prop.containsKey('oneOf')) return true;
+    if (prop.containsKey('anyOf')) return true;
     return prop['type'] == 'object' || prop.containsKey('properties');
   }
 

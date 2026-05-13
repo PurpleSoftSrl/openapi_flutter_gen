@@ -390,11 +390,6 @@ class ModelGenerator {
     _generateUnionFromJson(buf, schema);
     buf.writeln();
 
-    for (int i = 0; i < schema.variants.length; i++) {
-      _generateUnionVariant(buf, i, schema);
-      buf.writeln();
-    }
-
     if (!schema.isAnyOf && schema.discriminatorProperty == null) {
       buf.writeln('  Map<String, dynamic> toJson() => switch (this) {');
       for (final variant in schema.variants) {
@@ -408,6 +403,12 @@ class ModelGenerator {
     }
 
     buf.writeln('}');
+    buf.writeln();
+
+    for (int i = 0; i < schema.variants.length; i++) {
+      _generateUnionVariant(buf, i, schema);
+      buf.writeln();
+    }
 
     return GeneratedFile(
       path: 'lib/src/models/${sanitizeClassName(schema.name).toLowerCase()}.dart',
@@ -437,7 +438,7 @@ class ModelGenerator {
         final varClassName = _variantClassName(className, discValue, i);
         buf.writeln('    try { return $varClassName.fromJson(json); } catch (_) {}');
       }
-      buf.writeln('    throw FormatException(\'Cannot decode $className\', \$json);');
+      buf.writeln("    throw FormatException('Cannot decode $className', json);");
     }
 
     buf.writeln('  }');
@@ -509,8 +510,12 @@ class ModelGenerator {
   }
 
   static String _variantClassName(String parentName, String discValue, int index) {
-    final disc = discValue.isNotEmpty ? sanitizeClassName(discValue) : 'Variant$index';
-    return '${parentName}${disc}';
+    if (discValue.isEmpty) return '${parentName}Variant$index';
+    // If discValue is the full schema name (from $ref), just use the variant index
+    // to avoid double-prefixing: parentName + schemaName
+    final disc = sanitizeClassName(discValue);
+    if (disc.startsWith(parentName)) return disc;
+    return '${parentName}$disc';
   }
 
   static String _propertyDartType(IrProperty prop) {
