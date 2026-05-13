@@ -70,24 +70,92 @@ class OpenApiSpecParser {
     for (final entry in Map.of(_schemasRaw).entries) {
       if (entry.value is! Map<String, dynamic>) continue;
       final schema = entry.value as Map<String, dynamic>;
-      final props = schema['properties'];
-      if (props is! Map<String, dynamic>) continue;
+      _extractFromSchema(schema, entry.key, toAdd);
+    }
+    _schemasRaw.addAll(toAdd);
+    // Recurse: if we added new schemas, they might have nested inline schemas
+    if (toAdd.isNotEmpty) _extractInlineSchemasFromRaw();
+  }
+
+  void _extractFromSchema(Map<String, dynamic> schema, String parentName,
+      Map<String, Map<String, dynamic>> toAdd) {
+    final props = schema['properties'];
+    if (props is Map<String, dynamic>) {
       for (final propEntry in Map.of(props).entries) {
         if (propEntry.value is! Map<String, dynamic>) continue;
         final prop = propEntry.value as Map<String, dynamic>;
-        final propName = _toPascalCase(propEntry.key);
-        final inlineName = '${entry.key}$propName';
-        final isInlineObj = (prop['type'] == 'object' || prop.containsKey('properties')) &&
-            !prop.containsKey(r'$ref');
-        final isInlineEnum = prop.containsKey('enum');
-        final shouldExtract = isInlineObj || isInlineEnum;
-        if (shouldExtract && !_schemasRaw.containsKey(inlineName) && !_schemasRaw.containsKey(propName)) {
-          toAdd[inlineName] = Map.of(prop);
-          props[propEntry.key] = {r'$ref': '#/components/schemas/$inlineName'};
+        _extractProperty(prop, props, propEntry.key, parentName, toAdd);
+      }
+    }
+    // Extract from oneOf/anyOf/allOf
+    for (final key in ['oneOf', 'anyOf', 'allOf']) {
+      final list = schema[key];
+      if (list is List) {
+        for (var i = 0; i < list.length; i++) {
+          final item = list[i];
+          if (item is! Map<String, dynamic>) continue;
+          if (item.containsKey(r'$ref')) continue;
+          if (!_isExtractable(item)) continue;
+          final inlineName = '${parentName}Inline${i}';
+          if (!_schemasRaw.containsKey(inlineName) && !toAdd.containsKey(inlineName)) {
+            toAdd[inlineName] = Map.of(item);
+            list[i] = {r'$ref': '#/components/schemas/$inlineName'};
+          }
         }
       }
     }
-    _schemasRaw.addAll(toAdd);
+    // Extract from oneOf/anyOf/allOf inside individual properties
+    for (final propEntry in Map.of(props is Map ? props : <String, dynamic>{}).entries) {
+      if (propEntry.value is! Map<String, dynamic>) continue;
+      final prop = propEntry.value as Map<String, dynamic>;
+      for (final key in ['oneOf', 'anyOf', 'allOf']) {
+        final list = prop[key];
+        if (list is List) {
+          for (var i = 0; i < list.length; i++) {
+            final item = list[i];
+            if (item is! Map<String, dynamic>) continue;
+            if (item.containsKey(r'$ref')) continue;
+            if (!_isExtractable(item)) continue;
+            final inlineName = '${parentName}${_toPascalCase(propEntry.key)}Inline${i}';
+            if (!_schemasRaw.containsKey(inlineName) && !toAdd.containsKey(inlineName)) {
+              toAdd[inlineName] = Map.of(item);
+              list[i] = {r'$ref': '#/components/schemas/$inlineName'};
+            }
+          }
+        }
+      }
+    }
+    // Also extract from items of array properties
+    for (final entry in Map.of(props is Map ? props : <String, dynamic>{}).entries) {
+      if (entry.value is! Map<String, dynamic>) continue;
+      final prop = entry.value as Map<String, dynamic>;
+      final items = prop['items'];
+      if (items is Map<String, dynamic> && _isExtractable(items)) {
+        final itemsName = '${parentName}${_toPascalCase(entry.key)}Item';
+        if (!_schemasRaw.containsKey(itemsName) && !toAdd.containsKey(itemsName)) {
+          toAdd[itemsName] = Map.of(items);
+          prop['items'] = {r'$ref': '#/components/schemas/$itemsName'};
+        }
+      }
+    }
+  }
+
+  void _extractProperty(Map<String, dynamic> prop, Map<String, dynamic> props,
+      String propKey, String parentName, Map<String, Map<String, dynamic>> toAdd) {
+    final propName = _toPascalCase(propKey);
+    final inlineName = '${parentName}$propName';
+    if (_isExtractable(prop) &&
+        !_schemasRaw.containsKey(inlineName) && !toAdd.containsKey(inlineName) &&
+        !_schemasRaw.containsKey(propName)) {
+      toAdd[inlineName] = Map.of(prop);
+      props[propKey] = {r'$ref': '#/components/schemas/$inlineName'};
+    }
+  }
+
+  bool _isExtractable(Map<String, dynamic> prop) {
+    if (prop.containsKey(r'$ref')) return false;
+    if (prop.containsKey('enum')) return true;
+    return prop['type'] == 'object' || prop.containsKey('properties');
   }
 
   IrSchema _parseSchema(String name, Map<String, dynamic> schemaJson) {
