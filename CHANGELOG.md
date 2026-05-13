@@ -1,3 +1,7 @@
+## 0.2.3
+
+- Update README with correct version references
+
 ## 0.2.2
 
 - Generated pubspec uses pinned versions (dio: ^5.7.0, collection: ^1.19.0) instead of any
