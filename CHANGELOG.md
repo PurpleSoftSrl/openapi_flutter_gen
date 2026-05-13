@@ -1,3 +1,7 @@
+## 0.2.2
+
+- Generated pubspec uses pinned versions (dio: ^5.7.0, collection: ^1.19.0) instead of any
+
 ## 0.2.1
 
 - Test fixtures included in repo for CI compatibility
