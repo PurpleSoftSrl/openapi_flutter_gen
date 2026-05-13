@@ -388,7 +388,7 @@ class ApiGenerator {
       if (defaultSchema != null) {
         buf.writeln('      _ => ${className}HttpDefault(${_fromJsonExpr('response.data', defaultSchema)}),');
       } else {
-        buf.writeln('      _ => ${className}HttpDefault(response.data),');
+        buf.writeln('      _ => ${className}HttpDefault(),');
       }
     } else {
       buf.writeln('      _ => ${className}Error.fromResponse(response),');

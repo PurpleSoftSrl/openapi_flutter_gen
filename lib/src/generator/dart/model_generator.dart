@@ -80,9 +80,9 @@ class ModelGenerator {
     for (final prop in allProps) {
       final typeStr = _propertyDartType(prop);
       final fieldName = sanitizeFieldName(prop.name);
+      final jsonKey = prop.jsonKey ?? prop.name;
       buf.writeln('  final $typeStr $fieldName;');
     }
-
     buf.writeln();
     _generateFromJson(buf, allProps, className, schema);
     _generateToJson(buf, allProps, className);

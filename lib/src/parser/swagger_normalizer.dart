@@ -57,8 +57,8 @@ class SwaggerNormalizer {
     for (final entry in definitions.entries) {
       if (entry.value is Map<String, dynamic>) {
         final schema = entry.value as Map<String, dynamic>;
-        result[entry.key] = _convertPropertySchema(schema);
         _extractInlineEnums(result, entry.key, schema);
+        result[entry.key] = _convertPropertySchema(schema);
       }
     }
     return result;
@@ -74,10 +74,10 @@ class SwaggerNormalizer {
       if (entry.value is Map<String, dynamic>) {
         final prop = entry.value as Map<String, dynamic>;
         final propName = _toPascalCase(entry.key);
-        if (prop.containsKey('enum') && !target.containsKey(propName)) {
-          target[propName] = _convertPropertySchema(prop);
-          // Replace inline enum with $ref
-          props[entry.key] = {'\$ref': '#/components/schemas/$propName'};
+        final enumName = '${parentName}$propName';
+        if (prop.containsKey('enum') && !target.containsKey(enumName)) {
+          target[enumName] = _convertPropertySchema(prop);
+          props[entry.key] = {'\$ref': '#/components/schemas/$enumName'};
         }
       }
     }
