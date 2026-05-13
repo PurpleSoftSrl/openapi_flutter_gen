@@ -1,3 +1,8 @@
+## 0.2.1
+
+- Test fixtures included in repo for CI compatibility
+- Fix test file paths for GitHub Actions
+
 ## 0.2.0
 
 - Full OAS 3.1 YAML support (tested with train-travel OpenAPI)
