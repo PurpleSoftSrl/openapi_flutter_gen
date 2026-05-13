@@ -17,23 +17,16 @@ class ModelGenerator {
     final buf = StringBuffer(generateFileHeader());
 
     final allProps = <IrProperty>[];
-    final allRefNames = <String>[];
 
-    for (final ref in schema.allOfRefs) {
-      allRefNames.add(ref.refName);
-    }
-
-    allProps.addAll(schema.properties);
     for (final inline in schema.allOfInline) {
       for (final prop in inline.properties) {
         allProps.add(prop);
       }
     }
 
+    allProps.addAll(schema.properties);
+
     final imports = <String>{};
-    for (final refName in allRefNames) {
-      imports.add(refName);
-    }
 
     var needsTypedData = false;
     for (final prop in allProps) {
@@ -140,7 +133,7 @@ class ModelGenerator {
 
   static void _generateFromJson(StringBuffer buf, List<IrProperty> allProps, String className, IrObjectSchema schema) {
     buf.writeln('  factory $className.fromJson(Map<String, dynamic> json) {');
-    buf.writeln('    return $className(');
+    buf.writeln('    return ${allProps.isEmpty ? "const " : ""}$className(');
 
     final sourceProps = allProps.toList();
 
@@ -209,7 +202,7 @@ class ModelGenerator {
       buf.writeln(') return this;');
       buf.writeln();
     }
-    buf.writeln('    return $className(');
+    buf.writeln('    return ${allProps.isEmpty ? "const " : ""}$className(');
 
     for (final prop in allProps) {
       final fieldName = sanitizeFieldName(prop.name);
@@ -380,7 +373,6 @@ class ModelGenerator {
     for (final imp in imports.toList()..sort()) {
       buf.writeln("import '${imp.toLowerCase()}.dart';");
     }
-    buf.writeln("import 'dart:convert';");
     buf.writeln();
 
     buf.writeln('sealed class $className {');
@@ -511,11 +503,9 @@ class ModelGenerator {
 
   static String _variantClassName(String parentName, String discValue, int index) {
     if (discValue.isEmpty) return '${parentName}Variant$index';
-    // If discValue is the full schema name (from $ref), just use the variant index
-    // to avoid double-prefixing: parentName + schemaName
     final disc = sanitizeClassName(discValue);
-    if (disc.startsWith(parentName)) return disc;
-    return '${parentName}$disc';
+    if (disc.startsWith(parentName)) return '${disc}Variant$index';
+    return '${parentName}${disc}Variant$index';
   }
 
   static String _propertyDartType(IrProperty prop) {

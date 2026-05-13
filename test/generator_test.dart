@@ -473,8 +473,8 @@ void main() {
             'dart', ['analyze'],
             workingDirectory: clientDir,
           );
-          expect(analyze.exitCode, lessThanOrEqualTo(2),
-              reason: 'dart analyze failed (exit code ${analyze.exitCode}, 0=ok 2=warnings):\n${analyze.stderr}\n${analyze.stdout}');
+          expect(analyze.exitCode, 0,
+              reason: 'dart analyze failed (exit code ${analyze.exitCode}):\n${analyze.stderr}\n${analyze.stdout}');
         } finally {
           tempDir.deleteSync(recursive: true);
         }
@@ -523,8 +523,8 @@ void main() {
             'dart', ['analyze'],
             workingDirectory: clientDir,
           );
-          expect(analyze.exitCode, lessThanOrEqualTo(2),
-              reason: 'dart analyze failed (exit code ${analyze.exitCode}, 0=ok 2=warnings):\n${analyze.stderr}\n${analyze.stdout}');
+          expect(analyze.exitCode, 0,
+              reason: 'dart analyze failed (exit code ${analyze.exitCode}):\n${analyze.stderr}\n${analyze.stdout}');
         } finally {
           tempDir.deleteSync(recursive: true);
         }
