@@ -7,7 +7,7 @@
 [![Publish](https://github.com/PurpleSoftSrl/openapi_flutter_gen/actions/workflows/publish.yml/badge.svg)](https://github.com/PurpleSoftSrl/openapi_flutter_gen/actions/workflows/publish.yml)
 [![Stars](https://img.shields.io/github/stars/PurpleSoftSrl/openapi_flutter_gen?color=yellow)](https://github.com/PurpleSoftSrl/openapi_flutter_gen/stargazers)
 [![License](https://img.shields.io/badge/license-AGPL%20v3%20%7C%20Commercial-blue)](LICENSE)
-[![tests](https://img.shields.io/badge/tests-passing-brightgreen)](https://github.com/PurpleSoftSrl/openapi_flutter_gen/actions)
+[![tests](https://img.shields.io/badge/tests-36%2F36-brightgreen)](https://github.com/PurpleSoftSrl/openapi_flutter_gen/actions)
 
 Unlike other Dart/Flutter API clients (retrofit, chopper, ferry) that require build_runner at the consumer side, **openapi_flutter_gen** runs once as a CLI tool and produces ready-to-use Dart source files. No code generation in your CI. No generated `.g.dart` files to commit. Just pure Dart.
 
