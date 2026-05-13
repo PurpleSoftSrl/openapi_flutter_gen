@@ -72,7 +72,8 @@ class ApiGenerator {
 
     final resultImports = <String>{};
     for (final op in ops) {
-      final resultFileName = '${sanitizeFieldName(op.operationId)}_result';
+      final cleanName = sanitizeFieldName(op.operationId).replaceAll(RegExp(r'_+$'), '');
+      final resultFileName = '${cleanName}_result';
       resultImports.add(resultFileName);
     }
     for (final imp in resultImports.toList()..sort()) {

@@ -750,7 +750,7 @@ class OpenApiSpecParser {
 
   static String _toPascalCase(String s) {
     if (s.isEmpty) return s;
-    return s.split(RegExp(r'[_\-\s]+')).map((part) {
+    return s.split(RegExp(r'[\._\-\s]+')).map((part) {
       if (part.isEmpty) return '';
       return part[0].toUpperCase() + part.substring(1);
     }).join();

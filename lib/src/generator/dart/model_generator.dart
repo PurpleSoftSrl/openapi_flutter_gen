@@ -402,6 +402,20 @@ class ModelGenerator {
       buf.writeln();
     }
 
+    if (schema.discriminatorProperty != null) {
+      final unknownName = '${className}Unknown';
+      buf.writeln('class _$unknownName extends $className {');
+      buf.writeln('  const _$unknownName(this.data);');
+      buf.writeln('  final Map<String, dynamic> data;');
+      buf.writeln();
+      buf.writeln('  factory _$unknownName.fromJson(Map<String, dynamic> json) => _$unknownName(json);');
+      buf.writeln();
+      buf.writeln('  @override');
+      buf.writeln('  Map<String, dynamic> toJson() => data;');
+      buf.writeln('}');
+      buf.writeln();
+    }
+
     return GeneratedFile(
       path: 'lib/src/models/${sanitizeClassName(schema.name).toLowerCase()}.dart',
       content: buf.toString(),

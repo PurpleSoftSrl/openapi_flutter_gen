@@ -86,7 +86,7 @@ class SwaggerNormalizer {
 
   static String _toPascalCase(String s) {
     if (s.isEmpty) return s;
-    return s.split(RegExp(r'[_\-\s]+')).map((p) =>
+    return s.split(RegExp(r'[\._\-\s]+')).map((p) =>
       p.isEmpty ? '' : p[0].toUpperCase() + p.substring(1)).join();
   }
 
