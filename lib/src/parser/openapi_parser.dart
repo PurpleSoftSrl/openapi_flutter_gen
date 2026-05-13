@@ -73,7 +73,10 @@ class OpenApiSpecParser {
       _extractFromSchema(schema, entry.key, toAdd);
     }
     _schemasRaw.addAll(toAdd);
-    // Recurse: if we added new schemas, they might have nested inline schemas
+    // Also add to _doc so $ref resolution works for extracted schemas
+    if (_components['schemas'] is Map<String, dynamic>) {
+      (_components['schemas'] as Map<String, dynamic>).addAll(toAdd);
+    }
     if (toAdd.isNotEmpty) _extractInlineSchemasFromRaw();
   }
 
@@ -87,8 +90,8 @@ class OpenApiSpecParser {
         _extractProperty(prop, props, propEntry.key, parentName, toAdd);
       }
     }
-    // Extract from oneOf/anyOf/allOf — items become separate schemas
-    for (final key in ['oneOf', 'anyOf', 'allOf']) {
+    // Extract from oneOf/anyOf — items become separate schemas
+    for (final key in ['oneOf', 'anyOf']) {
       final list = schema[key];
       if (list is List) {
         for (var i = 0; i < list.length; i++) {
@@ -100,27 +103,6 @@ class OpenApiSpecParser {
           if (!_schemasRaw.containsKey(inlineName) && !toAdd.containsKey(inlineName)) {
             toAdd[inlineName] = Map.of(item);
             list[i] = {r'$ref': '#/components/schemas/$inlineName'};
-          }
-        }
-      }
-    }
-    // Extract from oneOf/anyOf/allOf inside individual properties
-    for (final propEntry in Map.of(props is Map ? props : <String, dynamic>{}).entries) {
-      if (propEntry.value is! Map<String, dynamic>) continue;
-      final prop = propEntry.value as Map<String, dynamic>;
-      for (final key in ['allOf']) {
-        final list = prop[key];
-        if (list is List) {
-          for (var i = 0; i < list.length; i++) {
-            final item = list[i];
-            if (item is! Map<String, dynamic>) continue;
-            if (item.containsKey(r'$ref')) continue;
-            if (!_isExtractable(item)) continue;
-            final inlineName = '${parentName}${_toPascalCase(propEntry.key)}Inline${i}';
-            if (!_schemasRaw.containsKey(inlineName) && !toAdd.containsKey(inlineName)) {
-              toAdd[inlineName] = Map.of(item);
-              list[i] = {r'$ref': '#/components/schemas/$inlineName'};
-            }
           }
         }
       }
