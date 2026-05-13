@@ -12,7 +12,7 @@ import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 final String petstorePath = p.normalize(
-  p.join(p.current, '..', 'test_specs', 'petstore.json'),
+    p.join(p.current, 'test', 'fixtures', 'petstore.json'),
 );
 
 void main() {
@@ -443,7 +443,7 @@ void main() {
     group('Swagger 2.0', () {
       test('normalizes Swagger 2.0 Petstore from petstore.swagger.io', () async {
         final swaggerPath = p.normalize(
-          p.join(p.current, '..', 'test_specs', 'petstore_swagger.json'),
+          p.join(p.current, 'test', 'fixtures', 'petstore_swagger.json'),
         );
         final swaggerJson = json.decode(
           await File(swaggerPath).readAsString(),
@@ -470,7 +470,7 @@ void main() {
 
       test('Swagger 2.0 generated client compiles with dart analyze', () async {
         final swaggerPath = p.normalize(
-          p.join(p.current, '..', 'test_specs', 'petstore_swagger.json'),
+          p.join(p.current, 'test', 'fixtures', 'petstore_swagger.json'),
         );
         final swaggerJson = json.decode(
           await File(swaggerPath).readAsString(),
@@ -518,7 +518,7 @@ void main() {
 
       test('Swagger 2.0 generated client with compute compiles', () async {
         final swaggerPath = p.normalize(
-          p.join(p.current, '..', 'test_specs', 'petstore_swagger.json'),
+          p.join(p.current, 'test', 'fixtures', 'petstore_swagger.json'),
         );
         final swaggerJson = json.decode(
           await File(swaggerPath).readAsString(),
@@ -561,7 +561,7 @@ void main() {
     group('Train Travel API (OAS 3.1 YAML)', () {
       test('train-travel YAML generated client compiles with dart analyze', () async {
         final specPath = p.normalize(
-          p.join(p.current, '..', 'test_specs', 'train_travel.yaml'),
+          p.join(p.current, 'test', 'fixtures', 'train_travel.yaml'),
         );
         final specJson = await loadSpec(specPath);
 
@@ -603,7 +603,7 @@ void main() {
 
       test('train-travel YAML with compute compiles', () async {
         final specPath = p.normalize(
-          p.join(p.current, '..', 'test_specs', 'train_travel.yaml'),
+          p.join(p.current, 'test', 'fixtures', 'train_travel.yaml'),
         );
         final specJson = await loadSpec(specPath);
         final parser = OpenApiSpecParser(specJson);
