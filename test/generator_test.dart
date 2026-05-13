@@ -437,6 +437,48 @@ void main() {
             reason: 'Swagger 2.0 operations should be parsed');
       });
 
+      test('Swagger 2.0 generated client compiles with dart analyze', () async {
+        final swaggerPath = p.normalize(
+          p.join(p.current, '..', 'test_specs', 'petstore_swagger.json'),
+        );
+        final swaggerJson = json.decode(
+          await File(swaggerPath).readAsString(),
+        ) as Map<String, dynamic>;
+
+        final normalized = SwaggerNormalizer.normalize(swaggerJson);
+        final parser = OpenApiSpecParser(normalized);
+        final doc = parser.parse();
+
+        final tempDir = Directory.systemTemp.createTempSync('oafg_swagger_');
+        try {
+          final generator = CodeGenerator(
+            doc: doc,
+            outputDir: tempDir.path,
+            packageName: 'petstore_client',
+            useIsolates: false,
+          );
+          await generator.generate();
+
+          final clientDir = p.join(tempDir.path, 'petstore_client');
+
+          final pubGet = await Process.run(
+            'dart', ['pub', 'get'],
+            workingDirectory: clientDir,
+          );
+          expect(pubGet.exitCode, 0,
+              reason: 'dart pub get failed:\n${pubGet.stderr}');
+
+          final analyze = await Process.run(
+            'dart', ['analyze'],
+            workingDirectory: clientDir,
+          );
+          expect(analyze.exitCode, 0,
+              reason: 'dart analyze failed:\n${analyze.stderr}\n${analyze.stdout}');
+        } finally {
+          tempDir.deleteSync(recursive: true);
+        }
+      });
+
       test('does not modify OAS 3.x documents', () {
         final result = SwaggerNormalizer.normalize(petstoreJson);
         expect(result, same(petstoreJson),
