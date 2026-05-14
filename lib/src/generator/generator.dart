@@ -7,6 +7,13 @@ import 'dart/model_generator.dart';
 import 'dart/api_generator.dart';
 import 'dart/support_generator.dart';
 
+/// Generates Dart code from an [IrApiDocument].
+
+/// Produces models, API services, result types, and support files
+/// (auth interceptors, pagination, etc.) into [outputDir].
+///
+/// Supports parallel file writing via [Isolate.spawn] when [useIsolates]
+/// is `true` (default), and `--use-compute` wrappers via [useCompute].
 class CodeGenerator {
   final IrApiDocument doc;
   final String outputDir;

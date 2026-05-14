@@ -1,6 +1,11 @@
 import '../ir/ir.dart';
 import 'loader.dart';
 
+/// Parses an OpenAPI 3.x document into an [IrApiDocument].
+
+/// Supports JSON and YAML (pre-parsed to Map), handles `$ref` resolution,
+/// inline schema extraction, oneOf/anyOf/allOf unions, and Swagger 2.0
+/// (via [SwaggerNormalizer]).
 class OpenApiSpecParser {
   final Map<String, dynamic> _doc;
   final Map<String, IrSchema> _schemas = {};
@@ -13,6 +18,7 @@ class OpenApiSpecParser {
     _schemasRaw = getMapOrEmpty(_components, 'schemas');
   }
 
+  /// Parses the entire document and returns an [IrApiDocument].
   IrApiDocument parse() {
     final info = _parseInfo();
     _parseAllSchemas();

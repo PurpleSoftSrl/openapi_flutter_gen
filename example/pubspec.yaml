@@ -1,0 +1,13 @@
+name: example
+description: Example usage of openapi_flutter_gen
+publish_to: none
+
+environment:
+  sdk: ^3.4.0
+
+dependencies:
+  openapi_flutter_gen:
+    path: ..
+
+dev_dependencies:
+  lints: ^4.0.0

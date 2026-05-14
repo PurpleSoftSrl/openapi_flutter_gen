@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:yaml/yaml.dart';
 
+/// Loads an OpenAPI spec from a local file path (JSON or YAML).
+
 Future<Map<String, dynamic>> loadSpec(String path) async {
   final file = File(path);
   if (!file.existsSync()) {
@@ -14,6 +16,8 @@ Future<Map<String, dynamic>> loadSpec(String path) async {
   }
   return json.decode(content) as Map<String, dynamic>;
 }
+
+/// Loads an OpenAPI spec from a remote URL (JSON or YAML).
 
 Future<Map<String, dynamic>> loadSpecFromUrl(String url) async {
   final client = HttpClient();
@@ -45,17 +49,23 @@ dynamic _yamlToJson(dynamic yamlValue) {
   return yamlValue;
 }
 
+/// Safely gets a [String] value from [map] by [key].
+
 String? getString(Map<String, dynamic> map, String key) {
   final value = map[key];
   if (value == null) return null;
   return value.toString();
 }
 
+/// Safely gets a [bool] value from [map] by [key].
+
 bool? getBool(Map<String, dynamic> map, String key) {
   final value = map[key];
   if (value is bool) return value;
   return null;
 }
+
+/// Safely gets an [int] value from [map] by [key].
 
 int? getInt(Map<String, dynamic> map, String key) {
   final value = map[key];
@@ -64,17 +74,23 @@ int? getInt(Map<String, dynamic> map, String key) {
   return null;
 }
 
+/// Safely gets a [double] value from [map] by [key].
+
 double? getDouble(Map<String, dynamic> map, String key) {
   final value = map[key];
   if (value is num) return value.toDouble();
   return null;
 }
 
+/// Safely gets a [List] value from [map] by [key].
+
 List<dynamic>? getList(Map<String, dynamic> map, String key) {
   final value = map[key];
   if (value is List) return value;
   return null;
 }
+
+/// Safely gets a [Map] value from [map] by [key].
 
 Map<String, dynamic>? getMap(Map<String, dynamic> map, String key) {
   final value = map[key];

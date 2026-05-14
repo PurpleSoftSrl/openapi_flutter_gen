@@ -1,3 +1,9 @@
+## 0.2.4
+
+- Add dartdoc documentation to all public API (20%+ coverage)
+- Shorten pubspec description for pub.dev scoring
+- Add example/ directory with usage sample
+
 ## 0.2.3
 
 - Update README with correct version references

@@ -1,11 +1,15 @@
 import 'dart:core';
 
+/// Abstract base for all intermediate representation schemas.
+
 sealed class IrSchema {
   String? description;
   bool isDeprecated;
 
   IrSchema({this.description, this.isDeprecated = false});
 }
+
+/// A reference to another schema by name.
 
 class IrRefSchema extends IrSchema {
   final String refName;
@@ -21,6 +25,8 @@ class IrRefSchema extends IrSchema {
   @override
   String toString() => 'IrRefSchema($refName)';
 }
+
+/// An object schema with named properties.
 
 class IrObjectSchema extends IrSchema {
   final String name;
@@ -49,6 +55,8 @@ class IrObjectSchema extends IrSchema {
   String toString() => 'IrObjectSchema($name)';
 }
 
+/// An enum schema with a list of values.
+
 class IrEnumSchema extends IrSchema {
   final String name;
   final List<IrEnumValue> values;
@@ -66,6 +74,8 @@ class IrEnumSchema extends IrSchema {
   String toString() => 'IrEnumSchema($name)';
 }
 
+/// A single enum value with a name and optional JSON value.
+
 class IrEnumValue {
   final String name;
   final String? jsonValue;
@@ -73,6 +83,8 @@ class IrEnumValue {
 
   const IrEnumValue({required this.name, this.jsonValue, this.description});
 }
+
+/// A oneOf / anyOf union schema with discriminated variants.
 
 class IrUnionSchema extends IrSchema {
   final String name;
@@ -95,12 +107,16 @@ class IrUnionSchema extends IrSchema {
   String toString() => 'IrUnionSchema($name, variants: ${variants.length})';
 }
 
+/// A variant within a [IrUnionSchema].
+
 class IrUnionVariant {
   final String? discriminatorValue;
   final IrSchema schema;
 
   const IrUnionVariant({this.discriminatorValue, required this.schema});
 }
+
+/// An array/list schema.
 
 class IrListSchema extends IrSchema {
   final IrSchema items;
@@ -117,6 +133,8 @@ class IrListSchema extends IrSchema {
   String toString() => 'IrListSchema(items: $items)';
 }
 
+/// A map/dictionary schema.
+
 class IrMapSchema extends IrSchema {
   final IrSchema values;
   final bool isNullable;
@@ -131,6 +149,8 @@ class IrMapSchema extends IrSchema {
   @override
   String toString() => 'IrMapSchema(values: $values)';
 }
+
+/// A primitive/leaf schema (string, integer, number, boolean, etc.).
 
 class IrPrimitiveSchema extends IrSchema {
   final IrPrimitiveType type;
@@ -165,6 +185,8 @@ class IrPrimitiveSchema extends IrSchema {
   String toString() => 'IrPrimitiveSchema(${type.name})';
 }
 
+/// The supported primitive types.
+
 enum IrPrimitiveType {
   string,
   integer,
@@ -177,6 +199,8 @@ enum IrPrimitiveType {
   base64,
   any,
 }
+
+/// A property of an object schema.
 
 class IrProperty {
   final String name;
@@ -201,6 +225,8 @@ class IrProperty {
     this.defaultValue,
   });
 }
+
+/// An API operation (HTTP method on a path).
 
 class IrOperation {
   final String operationId;
@@ -230,6 +256,8 @@ class IrOperation {
   });
 }
 
+/// A parameter of an operation (path, query, header, or cookie).
+
 class IrParameter {
   final String name;
   final IrParameterLocation location;
@@ -250,9 +278,15 @@ class IrParameter {
   });
 }
 
+/// Where a parameter is located in the HTTP request.
+
 enum IrParameterLocation { path, query, header, cookie }
 
+/// Encoding style for a parameter.
+
 enum IrEncodingStyle { simple, label, matrix, form, spaceDelimited, pipeDelimited, deepObject }
+
+/// A request body definition.
 
 class IrRequestBody {
   final Map<String, IrMediaType> content;
@@ -266,12 +300,16 @@ class IrRequestBody {
   });
 }
 
+/// A media type in a request or response body.
+
 class IrMediaType {
   final String contentType;
   final IrSchema? schema;
 
   IrMediaType({required this.contentType, this.schema});
 }
+
+/// An HTTP response definition.
 
 class IrResponse {
   final String statusCode;
@@ -286,6 +324,8 @@ class IrResponse {
     this.headers = const [],
   });
 }
+
+/// A header in an HTTP response.
 
 class IrResponseHeader {
   final String name;
@@ -302,6 +342,8 @@ class IrResponseHeader {
     this.description,
   });
 }
+
+/// The top-level OpenAPI document.
 
 class IrApiDocument {
   final IrApiInfo info;
@@ -321,6 +363,8 @@ class IrApiDocument {
   });
 }
 
+/// API metadata (title, version, description).
+
 class IrApiInfo {
   final String title;
   final String? version;
@@ -335,6 +379,8 @@ class IrApiInfo {
   });
 }
 
+/// A server definition.
+
 class IrServer {
   final String url;
   final String? description;
@@ -347,6 +393,8 @@ class IrServer {
   });
 }
 
+/// A server variable with default and optional enum values.
+
 class IrServerVariable {
   final String defaultValue;
   final List<String>? enumValues;
@@ -358,6 +406,8 @@ class IrServerVariable {
     this.description,
   });
 }
+
+/// A security scheme definition.
 
 class IrSecurityScheme {
   final String name;
