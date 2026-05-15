@@ -303,7 +303,7 @@ class ApiGenerator {
 
   static GeneratedFile? _generateOperationResponse(IrOperation op, {required String packageName, bool useCompute = false}) {
     final buf = StringBuffer(generateFileHeader());
-    buf.writeln('// ignore_for_file: unused_import');
+    buf.writeln('// ignore_for_file: unused_import, unnecessary_cast');
     buf.writeln();
     final className = '${sanitizeClassName(op.operationId)}Result';
 
@@ -523,19 +523,19 @@ class ApiGenerator {
     if (securitySchemes.isNotEmpty) {
       buf.writeln(' {');
       buf.writeln('    _dio.options.baseUrl = baseUrl;');
-      buf.writeln('    if (errorHandler != null) _addInterceptor(errorHandler!);');
+      buf.writeln('    if (errorHandler != null) { _addInterceptor(errorHandler!); }');
       for (final entry in securitySchemes.entries) {
         final camelName = sanitizeFieldName(entry.key);
         buf.writeln('    final ${camelName}Copy = $camelName;');
-        buf.writeln('    if (${camelName}Copy != null) _addInterceptor(${camelName}Copy.createInterceptor());');
+        buf.writeln('    if (${camelName}Copy != null) { _addInterceptor(${camelName}Copy.createInterceptor()); }');
       }
-      buf.writeln('    if (interceptors != null) _addInterceptors(interceptors!);');
+      buf.writeln('    if (interceptors != null) { _addInterceptors(interceptors!); }');
       buf.writeln('  }');
     } else {
       buf.writeln(' {');
       buf.writeln('    _dio.options.baseUrl = baseUrl;');
-      buf.writeln('    if (errorHandler != null) _addInterceptor(errorHandler!);');
-      buf.writeln('    if (interceptors != null) _addInterceptors(interceptors!);');
+      buf.writeln('    if (errorHandler != null) { _addInterceptor(errorHandler!); }');
+      buf.writeln('    if (interceptors != null) { _addInterceptors(interceptors!); }');
       buf.writeln('  }');
     }
     buf.writeln();
@@ -561,13 +561,13 @@ class ApiGenerator {
     buf.writeln('  Dio get dio {');
     buf.writeln('    if (!_initialized) {');
     buf.writeln('      _initialized = true;');
-    buf.writeln('      if (errorHandler != null) _addInterceptor(errorHandler!);');
+      buf.writeln('      if (errorHandler != null) { _addInterceptor(errorHandler!); }');
     for (final entry in securitySchemes.entries) {
       final camelName = sanitizeFieldName(entry.key);
       buf.writeln('      final ${camelName}Copy = $camelName;');
-      buf.writeln('      if (${camelName}Copy != null) _addInterceptor(${camelName}Copy.createInterceptor());');
+      buf.writeln('      if (${camelName}Copy != null) { _addInterceptor(${camelName}Copy.createInterceptor()); }');
     }
-    buf.writeln('      if (interceptors != null) _addInterceptors(interceptors!);');
+    buf.writeln('      if (interceptors != null) { _addInterceptors(interceptors!); }');
     buf.writeln('    }');
     buf.writeln('    return _dio;');
     buf.writeln('  }');
