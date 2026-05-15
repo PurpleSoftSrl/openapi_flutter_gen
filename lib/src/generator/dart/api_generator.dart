@@ -142,10 +142,10 @@ class ApiGenerator {
       final pName = sanitizeFieldName(param.name);
       switch (param.location) {
         case IrParameterLocation.header:
-          buf.writeln('    if ($pName != null) reqHeaders[\'${param.name}\'] = ${_serializeParamExpr(pName, param.schema)};');
+          buf.writeln('    if ($pName != null) { reqHeaders[\'${param.name}\'] = ${_serializeParamExpr(pName, param.schema)}; }');
           break;
         case IrParameterLocation.query:
-          buf.writeln('    if ($pName != null) reqQueryParams[\'${param.name}\'] = ${_serializeParamExpr(pName, param.schema)};');
+          buf.writeln('    if ($pName != null) { reqQueryParams[\'${param.name}\'] = ${_serializeParamExpr(pName, param.schema)}; }');
           break;
         default:
           break;
@@ -452,10 +452,10 @@ class ApiGenerator {
         return '${sanitizeClassName(schema.refName)}.fromJson($expr as Map<String, dynamic>)';
       case IrListSchema():
         if (schema.items is IrObjectSchema) {
-          return 'List<${sanitizeClassName((schema.items as IrObjectSchema).name)}>.generate(($expr as List).length, (i) => ${sanitizeClassName((schema.items as IrObjectSchema).name)}.fromJson(($expr as List)[i]), growable: false)';
+          return 'List<${sanitizeClassName((schema.items as IrObjectSchema).name)}>.generate(($expr as List).length, (i) => ${sanitizeClassName((schema.items as IrObjectSchema).name)}.fromJson(($expr as List)[i] as Map<String, dynamic>), growable: false)';
         }
         if (schema.items is IrRefSchema) {
-          return 'List<${sanitizeClassName((schema.items as IrRefSchema).refName)}>.generate(($expr as List).length, (i) => ${sanitizeClassName((schema.items as IrRefSchema).refName)}.fromJson(($expr as List)[i]), growable: false)';
+          return 'List<${sanitizeClassName((schema.items as IrRefSchema).refName)}>.generate(($expr as List).length, (i) => ${sanitizeClassName((schema.items as IrRefSchema).refName)}.fromJson(($expr as List)[i] as Map<String, dynamic>), growable: false)';
         }
         return expr;
       case IrPrimitiveSchema(type: IrPrimitiveType.integer):

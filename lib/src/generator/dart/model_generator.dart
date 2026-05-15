@@ -19,7 +19,7 @@ class ModelGenerator {
     final className = sanitizeClassName(schemaName);
     final dartType = dartTypeFromPrimitive(schema.type);
     final buf = StringBuffer(generateFileHeader());
-    buf.writeln('/// Named primitive type from the SumUp API spec.');
+    buf.writeln('/// Named type for `$className` from the SumUp API spec.');
     buf.writeln('typedef $className = $dartType;');
     return GeneratedFile(
       path: 'lib/src/models/${className.toLowerCase()}.dart',
@@ -36,7 +36,7 @@ class ModelGenerator {
       buf.writeln("import '${importName.toLowerCase()}.dart';");
       buf.writeln();
     }
-    buf.writeln('/// List wrapper type generated from a SumUp API spec array schema.');
+    buf.writeln('/// List wrapper for `$className` from the SumUp API spec.');
     buf.writeln('typedef $className = List<$itemType>;');
     return GeneratedFile(
       path: 'lib/src/models/${className.toLowerCase()}.dart',
@@ -83,7 +83,15 @@ class ModelGenerator {
 
     final className = sanitizeClassName(schema.name);
 
-    buf.writeln('/// Object model for `$className` from the SumUp API spec.');
+    // Emit dartdoc from OpenAPI description
+    final desc = schema.description;
+    if (desc != null && desc.isNotEmpty) {
+      for (final line in desc.split('\n')) {
+        buf.writeln('/// ${line.trim()}');
+      }
+    } else {
+      buf.writeln('/// Object model for `$className` from the SumUp API spec.');
+    }
     buf.writeln('class $className {');
     if (allProps.isEmpty) {
       buf.writeln('  const $className();');
@@ -342,7 +350,14 @@ class ModelGenerator {
     final typeStr = schema.enumType == IrPrimitiveType.string ? 'String' : 'int';
 
     final schemaValues = schema.values;
-    buf.writeln('/// Enum for `$className` from the SumUp API spec.');
+    final desc = schema.description;
+    if (desc != null && desc.isNotEmpty) {
+      for (final line in desc.split('\n')) {
+        buf.writeln('/// ${line.trim()}');
+      }
+    } else {
+      buf.writeln('/// Enum for `$className` from the SumUp API spec.');
+    }
     buf.writeln('enum $className {');
 
     for (int i = 0; i < schemaValues.length; i++) {
@@ -412,6 +427,12 @@ class ModelGenerator {
     }
     buf.writeln();
 
+    final desc = schema.description;
+    if (desc != null && desc.isNotEmpty) {
+      for (final line in desc.split('\n')) {
+        buf.writeln('/// ${line.trim()}');
+      }
+    }
     buf.writeln('sealed class $className {');
     buf.writeln('  const $className();');
     buf.writeln();
@@ -643,7 +664,7 @@ class ModelGenerator {
       case IrListSchema():
         if (schema.items is IrObjectSchema || schema.items is IrRefSchema) {
           final itemName = _propertyImportName(schema.items) ?? 'Object';
-          return 'List<$itemName>.generate(($expr as List).length, (i) => $itemName.fromJson(($expr as List)[i]), growable: false)';
+          return 'List<$itemName>.generate(($expr as List).length, (i) => $itemName.fromJson(($expr as List)[i] as Map<String, dynamic>), growable: false)';
         }
         if (schema.items is IrEnumSchema) {
           final enumName = sanitizeClassName((schema.items as IrEnumSchema).name);
