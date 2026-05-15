@@ -1,4 +1,15 @@
-## 0.2.4
+## 0.2.5
+
+- Auto-format generated code with `dart format` after generation
+- Fix `[]` brackets in schema/parameter names (OAS 3.1 compatibility)
+- Fix `String??` double-nullable in generated method signatures
+- Fix missing inline schema files (IrPrimitiveSchema, IrListSchema)
+- Fix inline enum/object extraction from nested schemas
+- Fix `List.generate` strict-cast: add `(expr as List).length` cast
+- Fix `Response<dynamic>` → `Response` raw type warnings
+- Fix `dio.request` → `dio.request<Map<String, dynamic>>` type param
+- Fix duplicate schema naming (Post400Response → Post400Response1)
+- Fix `requestBody` with empty schema generating invalid code
 
 - Add dartdoc documentation to all public API (20%+ coverage)
 - Shorten pubspec description for pub.dev scoring

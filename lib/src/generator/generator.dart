@@ -46,16 +46,34 @@ class CodeGenerator {
     }
 
     print('Generated ${files.length} files in $outputPath');
+    await _formatOutput(outputPath);
+  }
+
+  Future<void> _formatOutput(String outputPath) async {
+    try {
+      final result = await Process.run(
+        'dart',
+        ['format', '.'],
+        workingDirectory: outputPath,
+      );
+      if (result.exitCode != 0) {
+        print('Warning: dart format exited with code ${result.exitCode}');
+      } else {
+        print('Formatted generated code.');
+      }
+    } catch (e) {
+      print('Warning: Could not format generated code: $e');
+    }
   }
 
   List<GeneratedFile> _collectAllFiles() {
     final files = <GeneratedFile>[];
 
-    for (final schema in doc.schemas.values) {
+    for (final entry in doc.schemas.entries) {
       try {
-        files.add(ModelGenerator.generate(schema, packageName: packageName));
+        files.add(ModelGenerator.generate(entry.value, packageName: packageName, schemaName: entry.key));
       } catch (e) {
-        print('Warning: Failed to generate model for ${schema.runtimeType}: $e');
+        print('Warning: Failed to generate model for ${entry.key}: $e');
       }
     }
 

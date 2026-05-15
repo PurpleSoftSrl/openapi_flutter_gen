@@ -156,10 +156,12 @@ class ApiGenerator {
 
     final pathUrl = _buildPathUrl(op);
 
-    buf.writeln('    final response = await dio.request(');
+    buf.writeln('    final response = await dio.request<Map<String, dynamic>>(');
     buf.writeln('      \'$pathUrl\',');
 
-    final hasBody = op.requestBody != null && op.requestBody!.content.isNotEmpty;
+    final hasBody = op.requestBody != null &&
+        op.requestBody!.content.isNotEmpty &&
+        op.requestBody!.content.values.first.schema != null;
     final isMultipart = hasBody && op.requestBody!.content.keys.any((ct) => ct.contains('multipart'));
     final isBinary = hasBody && op.requestBody!.content.values.any((mt) {
       final s = mt.schema;
@@ -167,16 +169,16 @@ class ApiGenerator {
     }) && !isMultipart;
 
     if (hasBody) {
-      final paramName = _bodyParamName(op);
+      final paramName = _bodyParamName(op) ?? 'body';
       final isRequired = op.requestBody!.isRequired;
       final bodySchema = op.requestBody!.content.values.first.schema;
       final needsToJson = _needsToJson(bodySchema);
 
       if (isMultipart) {
         final suffix = isRequired ? '.toFormData()' : '?.toFormData()';
-        buf.writeln('      data: ${paramName ?? 'body'}$suffix,');
+        buf.writeln('      data: $paramName$suffix,');
       } else if (isBinary && bodySchema is IrPrimitiveSchema) {
-        buf.writeln('      data: Stream.fromIterable([${paramName ?? 'body'}]),');
+        buf.writeln('      data: Stream.fromIterable([$paramName]),');
       } else {
         String suffix;
         if (needsToJson && bodySchema is IrListSchema) {
@@ -186,7 +188,7 @@ class ApiGenerator {
         } else {
           suffix = '';
         }
-        buf.writeln('      data: ${paramName != null ? '$paramName$suffix' : 'null'},');
+        buf.writeln('      data: $paramName$suffix,');
       }
     }
 
@@ -239,11 +241,14 @@ class ApiGenerator {
       if (param.location == IrParameterLocation.path) {
         params.add('required $typeStr $pName');
       } else {
-        params.add('$typeStr? $pName');
+        final alreadyNullable = typeStr.endsWith('?');
+        params.add(alreadyNullable ? '$typeStr $pName' : '$typeStr? $pName');
       }
     }
 
-    if (op.requestBody != null && op.requestBody!.content.isNotEmpty) {
+    if (op.requestBody != null &&
+        op.requestBody!.content.isNotEmpty &&
+        op.requestBody!.content.values.first.schema != null) {
       final mt = op.requestBody!.content.values.first;
       final schema = mt.schema;
       if (schema != null) {
@@ -253,7 +258,8 @@ class ApiGenerator {
         if (isRequired) {
           params.add('required $typeStr $pName');
         } else {
-          params.add('$typeStr? $pName');
+          final alreadyNullable = typeStr.endsWith('?');
+          params.add(alreadyNullable ? '$typeStr $pName' : '$typeStr? $pName');
         }
       }
     }
@@ -297,6 +303,8 @@ class ApiGenerator {
 
   static GeneratedFile? _generateOperationResponse(IrOperation op, {required String packageName, bool useCompute = false}) {
     final buf = StringBuffer(generateFileHeader());
+    buf.writeln('// ignore_for_file: unused_import');
+    buf.writeln();
     final className = '${sanitizeClassName(op.operationId)}Result';
 
     buf.writeln('import \'package:dio/dio.dart\';');
@@ -358,7 +366,7 @@ class ApiGenerator {
   static void _generateResultFromResponse(StringBuffer buf, IrOperation op) {
     final className = '${sanitizeClassName(op.operationId)}Result';
 
-    buf.writeln('  factory $className.fromResponse(Response response) {');
+    buf.writeln('  factory $className.fromResponse(Response<dynamic> response) {');
     buf.writeln('    final statusCode = response.statusCode ?? 0;');
     buf.writeln('    return switch (statusCode) {');
 
@@ -426,7 +434,7 @@ class ApiGenerator {
       buf.writeln('  const ${parentName}Error(this.response);');
       buf.writeln('  final Response<dynamic> response;');
       buf.writeln();
-      buf.writeln('  factory ${parentName}Error.fromResponse(Response response) => ${parentName}Error(response);');
+      buf.writeln('  factory ${parentName}Error.fromResponse(Response<dynamic> response) => ${parentName}Error(response);');
       buf.writeln('}');
     }
   }
@@ -444,10 +452,10 @@ class ApiGenerator {
         return '${sanitizeClassName(schema.refName)}.fromJson($expr as Map<String, dynamic>)';
       case IrListSchema():
         if (schema.items is IrObjectSchema) {
-          return 'List<${sanitizeClassName((schema.items as IrObjectSchema).name)}>.generate($expr.length, (i) => ${sanitizeClassName((schema.items as IrObjectSchema).name)}.fromJson(($expr as List)[i]), growable: false)';
+          return 'List<${sanitizeClassName((schema.items as IrObjectSchema).name)}>.generate(($expr as List).length, (i) => ${sanitizeClassName((schema.items as IrObjectSchema).name)}.fromJson(($expr as List)[i] as Map<String, dynamic>), growable: false)';
         }
         if (schema.items is IrRefSchema) {
-          return 'List<${sanitizeClassName((schema.items as IrRefSchema).refName)}>.generate($expr.length, (i) => ${sanitizeClassName((schema.items as IrRefSchema).refName)}.fromJson(($expr as List)[i]), growable: false)';
+          return 'List<${sanitizeClassName((schema.items as IrRefSchema).refName)}>.generate(($expr as List).length, (i) => ${sanitizeClassName((schema.items as IrRefSchema).refName)}.fromJson(($expr as List)[i] as Map<String, dynamic>), growable: false)';
         }
         return expr;
       case IrPrimitiveSchema(type: IrPrimitiveType.integer):

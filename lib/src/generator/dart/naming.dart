@@ -1,15 +1,7 @@
-
-String _toSnakeCase(String s) {
-  if (s.isEmpty) return s;
-  return s
-      .replaceAllMapped(RegExp(r'([A-Z]+)'), (m) => '_${m.group(1)!.toLowerCase()}')
-      .replaceAll(RegExp(r'^_'), '')
-      .replaceAll(RegExp(r'__+'), '_');
-}
-
 String _toPascalCase(String s) {
   if (s.isEmpty) return s;
   return s
+      .replaceAll(RegExp(r'[\[\]]+'), '_')
       .split(RegExp(r'[\._\-\s]+'))
       .where((p) => p.isNotEmpty)
       .map((p) => p[0].toUpperCase() + p.substring(1))
@@ -22,11 +14,14 @@ String _toCamelCase(String s) {
   return pascal[0].toLowerCase() + pascal.substring(1);
 }
 
-String modelFileName(String modelName) => '${_toSnakeCase(modelName)}.dart';
-
-String serviceFileName(String tag) => '${_toSnakeCase(tag)}.dart';
-
-String interfaceFileName(String name) => '${_toSnakeCase(name)}.dart';
+String sanitizeFieldName(String name) {
+  final cleaned = _toCamelCase(
+    name
+        .replaceAll(RegExp(r'[\[\]()]+'), '_')
+        .replaceAll(RegExp(r'[\.]+'), '_'),
+  );
+  return safeDartName(cleaned.isNotEmpty ? cleaned : 'value');
+}
 
 String safeDartName(String name) {
   const keywords = {
@@ -43,8 +38,6 @@ String safeDartName(String name) {
   if (keywords.contains(name)) return '${name}_';
   return name;
 }
-
-String sanitizeFieldName(String name) => safeDartName(_toCamelCase(name));
 
 String sanitizeClassName(String name) => safeDartName(_toPascalCase(name));
 

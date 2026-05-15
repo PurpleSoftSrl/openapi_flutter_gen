@@ -141,9 +141,11 @@ class OpenApiSpecParser {
       String propKey, String parentName, Map<String, Map<String, dynamic>> toAdd) {
     final propName = _toPascalCase(propKey);
     final inlineName = '${parentName}$propName';
+    final propNameExists = _schemasRaw.containsKey(propName);
+    final inlineNameExists = _schemasRaw.containsKey(inlineName) || toAdd.containsKey(inlineName);
     if (_isExtractable(prop) &&
-        !_schemasRaw.containsKey(inlineName) && !toAdd.containsKey(inlineName) &&
-        !_schemasRaw.containsKey(propName)) {
+        !inlineNameExists &&
+        !propNameExists) {
       toAdd[inlineName] = Map.of(prop);
       props[propKey] = {r'$ref': '#/components/schemas/$inlineName'};
     }
@@ -252,15 +254,16 @@ class OpenApiSpecParser {
     }
   }
 
-  void _registerInlineSchema(IrSchema? schema) {
+  void _registerInlineSchema(IrSchema? schema, [String? overrideName]) {
     if (schema == null) return;
-    if (schema is IrObjectSchema && !_schemas.containsKey(schema.name)) {
-      _schemas[schema.name] = schema;
-    } else if (schema is IrEnumSchema && !_schemas.containsKey(schema.name)) {
-      _schemas[schema.name] = schema;
-    } else if (schema is IrUnionSchema && !_schemas.containsKey(schema.name)) {
-      _schemas[schema.name] = schema;
-    } else if (schema is IrListSchema) {
+    final name = overrideName ??
+        (schema is IrObjectSchema ? schema.name :
+         schema is IrEnumSchema ? schema.name :
+         schema is IrUnionSchema ? schema.name : null);
+    if (name != null && !_schemas.containsKey(name)) {
+      _schemas[name] = schema;
+    }
+    if (schema is IrListSchema) {
       _registerInlineSchema(schema.items);
     } else if (schema is IrMapSchema) {
       _registerInlineSchema(schema.values);
@@ -311,13 +314,17 @@ class OpenApiSpecParser {
         if (itemType == 'null') continue;
         if (itemType == 'string' && item.containsKey('enum')) {
           final enumSchema = _parseEnum('${name}_${variants.length}', item);
+          _registerInlineSchema(enumSchema);
           variants.add(IrUnionVariant(schema: enumSchema));
         } else if (item.containsKey('properties') || itemType == 'object') {
           final objSchema = _parseObject('${name}_${variants.length}', item);
+          _registerInlineSchema(objSchema);
           variants.add(IrUnionVariant(schema: objSchema));
         } else {
-          final primitive = _parsePrimitive(item);
-          variants.add(IrUnionVariant(schema: primitive));
+          final variantName = '${name}_${variants.length}';
+          final schema = _parseSchema(variantName, item);
+          _registerInlineSchema(schema, _toPascalCase(variantName));
+          variants.add(IrUnionVariant(schema: schema));
         }
       }
     }
@@ -403,6 +410,7 @@ class OpenApiSpecParser {
       if (entry.value is! Map<String, dynamic>) continue;
       final propJson = entry.value as Map<String, dynamic>;
       final propSchema = _parseSchema('${name}_${entry.key}', propJson);
+      _registerInlineSchema(propSchema);
       props.add(IrProperty(
         name: entry.key,
         jsonKey: _toCamelCase(entry.key) != entry.key ? entry.key : null,

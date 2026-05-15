@@ -3,14 +3,45 @@ import '../../util/type_utils.dart';
 import 'naming.dart';
 
 class ModelGenerator {
-  static GeneratedFile generate(IrSchema schema, {required String packageName}) {
+  static GeneratedFile generate(IrSchema schema, {required String packageName, String? schemaName}) {
     return switch (schema) {
       IrObjectSchema() => _generateObject(schema, packageName: packageName),
       IrEnumSchema() => _generateEnum(schema, packageName: packageName),
       IrUnionSchema() => _generateUnion(schema, packageName: packageName),
+      IrPrimitiveSchema() => _generatePrimitive(schema, schemaName: schemaName!, packageName: packageName),
+      IrListSchema() => _generateObjectAlias(schema, schemaName: schemaName!, packageName: packageName),
       IrRefSchema() => throw UnimplementedError('Ref schemas should be resolved'),
       _ => throw UnimplementedError('Unexpected schema type: $schema'),
     };
+  }
+
+  static GeneratedFile _generatePrimitive(IrPrimitiveSchema schema, {required String schemaName, required String packageName}) {
+    final className = sanitizeClassName(schemaName);
+    final dartType = dartTypeFromPrimitive(schema.type);
+    final buf = StringBuffer(generateFileHeader());
+    buf.writeln('/// Named primitive type from the SumUp API spec.');
+    buf.writeln('typedef $className = $dartType;');
+    return GeneratedFile(
+      path: 'lib/src/models/${className.toLowerCase()}.dart',
+      content: buf.toString(),
+    );
+  }
+
+  static GeneratedFile _generateObjectAlias(IrListSchema schema, {required String schemaName, required String packageName}) {
+    final className = sanitizeClassName(schemaName);
+    final itemType = schemaToDartType(schema.items);
+    final importName = _schemaImportName(schema.items);
+    final buf = StringBuffer(generateFileHeader());
+    if (importName != null) {
+      buf.writeln("import '${importName.toLowerCase()}.dart';");
+      buf.writeln();
+    }
+    buf.writeln('/// List wrapper type generated from a SumUp API spec array schema.');
+    buf.writeln('typedef $className = List<$itemType>;');
+    return GeneratedFile(
+      path: 'lib/src/models/${className.toLowerCase()}.dart',
+      content: buf.toString(),
+    );
   }
 
   static GeneratedFile _generateObject(IrObjectSchema schema, {required String packageName}) {
@@ -52,6 +83,7 @@ class ModelGenerator {
 
     final className = sanitizeClassName(schema.name);
 
+    buf.writeln('/// Object model for `$className` from the SumUp API spec.');
     buf.writeln('class $className {');
     if (allProps.isEmpty) {
       buf.writeln('  const $className();');
@@ -303,11 +335,14 @@ class ModelGenerator {
 
   static GeneratedFile _generateEnum(IrEnumSchema schema, {required String packageName}) {
     final buf = StringBuffer(generateFileHeader());
+    buf.writeln('// ignore_for_file: constant_identifier_names');
+    buf.writeln();
     final className = sanitizeClassName(schema.name);
 
     final typeStr = schema.enumType == IrPrimitiveType.string ? 'String' : 'int';
 
     final schemaValues = schema.values;
+    buf.writeln('/// Enum for `$className` from the SumUp API spec.');
     buf.writeln('enum $className {');
 
     for (int i = 0; i < schemaValues.length; i++) {
@@ -352,6 +387,8 @@ class ModelGenerator {
 
   static GeneratedFile _generateUnion(IrUnionSchema schema, {required String packageName}) {
     final buf = StringBuffer(generateFileHeader());
+    buf.writeln('// ignore_for_file: unused_import, unnecessary_cast');
+    buf.writeln();
     final className = sanitizeClassName(schema.name);
 
     final imports = <String>{};
@@ -459,6 +496,7 @@ class ModelGenerator {
     final variantSchema = variant.schema;
     if (variantSchema is IrRefSchema) {
       final refName = sanitizeClassName(variantSchema.refName);
+      buf.writeln('/// Sealed variant for `$varClassName` in `$className`.');
       buf.writeln('class $varClassName extends $className {');
       buf.writeln('  const $varClassName(this.value);');
       buf.writeln('  final $refName value;');
@@ -469,6 +507,7 @@ class ModelGenerator {
       buf.writeln('  Map<String, dynamic> toJson() => value.toJson();');
       buf.writeln('}');
     } else if (variantSchema is IrObjectSchema) {
+      buf.writeln('/// Sealed variant for `$varClassName` in `$className`.');
       buf.writeln('class $varClassName extends $className {');
       buf.writeln('  const $varClassName({');
       for (final prop in variantSchema.properties) {
@@ -503,6 +542,33 @@ class ModelGenerator {
       buf.writeln('}');
     } else if (variantSchema is IrPrimitiveSchema) {
       final typeStr = schemaToDartType(variantSchema);
+      buf.writeln('/// Sealed variant for `$varClassName` in `$className`.');
+      buf.writeln('class $varClassName extends $className {');
+      buf.writeln('  const $varClassName(this.value);');
+      buf.writeln('  final $typeStr value;');
+      buf.writeln();
+      buf.writeln('  factory $varClassName.fromJson(dynamic json) => $varClassName(${_fromJsonExpr('json', variantSchema)});');
+      buf.writeln();
+      buf.writeln('  @override');
+      buf.writeln('  Map<String, dynamic> toJson() => {\'value\': ${_toJsonExpr('value', variantSchema)}};');
+      buf.writeln('}');
+    } else if (variantSchema is IrListSchema) {
+      final typeStr = schemaToDartType(variantSchema);
+      final fromExpr = _fromJsonExpr('json', variantSchema);
+      final toExpr = _toJsonExpr('value', variantSchema);
+      buf.writeln('/// Sealed variant for `$varClassName` in `$className`.');
+      buf.writeln('class $varClassName extends $className {');
+      buf.writeln('  const $varClassName(this.value);');
+      buf.writeln('  final $typeStr value;');
+      buf.writeln();
+      buf.writeln('  factory $varClassName.fromJson(dynamic json) => $varClassName($fromExpr);');
+      buf.writeln();
+      buf.writeln('  @override');
+      buf.writeln('  Map<String, dynamic> toJson() => {\'value\': $toExpr};');
+      buf.writeln('}');
+    } else if (variantSchema is IrEnumSchema) {
+      final typeStr = schemaToDartType(variantSchema);
+      buf.writeln('/// Sealed variant for `$varClassName` in `$className`.');
       buf.writeln('class $varClassName extends $className {');
       buf.writeln('  const $varClassName(this.value);');
       buf.writeln('  final $typeStr value;');
@@ -577,7 +643,7 @@ class ModelGenerator {
       case IrListSchema():
         if (schema.items is IrObjectSchema || schema.items is IrRefSchema) {
           final itemName = _propertyImportName(schema.items) ?? 'Object';
-          return 'List<$itemName>.generate($expr.length, (i) => $itemName.fromJson(($expr as List)[i]), growable: false)';
+          return 'List<$itemName>.generate(($expr as List).length, (i) => $itemName.fromJson(($expr as List)[i] as Map<String, dynamic>), growable: false)';
         }
         if (schema.items is IrEnumSchema) {
           final enumName = sanitizeClassName((schema.items as IrEnumSchema).name);

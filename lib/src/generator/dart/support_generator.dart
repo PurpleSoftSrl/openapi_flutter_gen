@@ -26,8 +26,8 @@ ${generateFileHeader()}
 
 import 'package:dio/dio.dart';
 
-typedef StatusCodeCallback = void Function(Response response);
-typedef AnyStatusCodeCallback = void Function(int statusCode, Response response);
+typedef StatusCodeCallback = void Function(Response<dynamic> response);
+typedef AnyStatusCodeCallback = void Function(int statusCode, Response<dynamic> response);
 
 class ApiErrorInterceptor extends Interceptor {
   ApiErrorInterceptor({
@@ -53,7 +53,7 @@ class ApiErrorInterceptor extends Interceptor {
   final bool skipGlobal;
 
   @override
-  void onResponse(Response response, ResponseInterceptorHandler handler) {
+  void onResponse(Response<dynamic> response, ResponseInterceptorHandler handler) {
     final status = response.statusCode ?? 0;
     final perCall = response.requestOptions.extra['perCallErrorHandler'];
     if (perCall is ApiErrorInterceptor) {
@@ -67,7 +67,7 @@ class ApiErrorInterceptor extends Interceptor {
     handler.next(response);
   }
 
-  void _dispatch(int status, Response response) {
+  void _dispatch(int status, Response<dynamic> response) {
     onAny?.call(status, response);
     switch (status) {
       case 400: onBadRequest?.call(response);
@@ -296,12 +296,12 @@ class RetryInterceptor extends Interceptor {
     if (retryCount < maxRetries &&
         (err.response?.statusCode != null &&
             retryableStatuses.contains(err.response!.statusCode!))) {
-      await Future.delayed(retryDelay * (retryCount + 1));
+      await Future<void>.delayed(retryDelay * (retryCount + 1));
 
       requestOptions.extra['retry_count'] = retryCount + 1;
 
       try {
-        final response = await Dio().fetch(requestOptions);
+        final response = await Dio().fetch<dynamic>(requestOptions);
         handler.resolve(response);
       } catch (e) {
         handler.next(DioException(requestOptions: requestOptions, error: e));
@@ -327,7 +327,7 @@ class LoggingInterceptor extends Interceptor {
   }
 
   @override
-  void onResponse(Response response, ResponseInterceptorHandler handler) {
+  void onResponse(Response<dynamic> response, ResponseInterceptorHandler handler) {
     logger('\${response.statusCode} \${response.requestOptions.path}');
     handler.next(response);
   }
