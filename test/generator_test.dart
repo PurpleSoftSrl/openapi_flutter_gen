@@ -11,6 +11,16 @@ import 'package:openapi_flutter_gen/src/generator/dart/api_generator.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
+final _keepTemp = Platform.environment['KEEP_TEST_OUTPUT'] == '1';
+
+void _cleanupDir(Directory d) {
+  if (!_keepTemp) {
+    d.deleteSync(recursive: true);
+  } else {
+    print('  📁 KEPT: ${d.path}');
+  }
+}
+
 final String petstorePath = p.normalize(
     p.join(p.current, 'test', 'fixtures', 'petstore.json'),
 );
@@ -354,7 +364,7 @@ void main() {
         expect(File(p.join(coreDir.path, 'interceptors.dart')).existsSync(), isTrue);
         expect(File(p.join(coreDir.path, 'pagination.dart')).existsSync(), isTrue);
       } finally {
-        tempDir.deleteSync(recursive: true);
+        _cleanupDir(tempDir);
       }
     });
 
@@ -378,7 +388,7 @@ void main() {
         expect(content, isNot(contains('}}')), reason: 'Found double brace');
         expect(content, isNot(contains("''")), reason: 'Found empty string quotes');
       } finally {
-        tempDir.deleteSync(recursive: true);
+        _cleanupDir(tempDir);
       }
     });
 
@@ -406,7 +416,7 @@ void main() {
           expect(content, isNot(contains(',,')), reason: 'Double comma in ${p.basename(file.path)}');
         }
       } finally {
-        tempDir.deleteSync(recursive: true);
+        _cleanupDir(tempDir);
       }
     });
 
@@ -436,7 +446,7 @@ void main() {
         expect(analyze.exitCode, 0,
             reason: 'dart analyze failed:\n${analyze.stderr}\n${analyze.stdout}');
       } finally {
-        tempDir.deleteSync(recursive: true);
+        _cleanupDir(tempDir);
       }
     });
 
@@ -506,7 +516,7 @@ void main() {
           expect(analyze.exitCode, 0,
               reason: 'dart analyze failed (exit code ${analyze.exitCode}):\n${analyze.stderr}\n${analyze.stdout}');
         } finally {
-          tempDir.deleteSync(recursive: true);
+          _cleanupDir(tempDir);
         }
       });
 
@@ -553,7 +563,7 @@ void main() {
           expect(analyze.exitCode, 0,
               reason: 'dart analyze failed:\n${analyze.stderr}\n${analyze.stdout}');
         } finally {
-          tempDir.deleteSync(recursive: true);
+          _cleanupDir(tempDir);
         }
       });
     });
@@ -597,7 +607,7 @@ void main() {
           expect(analyze.exitCode, 0,
               reason: 'dart analyze failed (exit code ${analyze.exitCode}):\n${analyze.stderr}\n${analyze.stdout}');
         } finally {
-          tempDir.deleteSync(recursive: true);
+          _cleanupDir(tempDir);
         }
       });
 
@@ -636,7 +646,7 @@ void main() {
           expect(analyze.exitCode, 0,
               reason: 'dart analyze failed:\n${analyze.stderr}\n${analyze.stdout}');
         } finally {
-          tempDir.deleteSync(recursive: true);
+          _cleanupDir(tempDir);
         }
       });
     });

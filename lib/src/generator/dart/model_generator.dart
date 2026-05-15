@@ -231,7 +231,7 @@ class ModelGenerator {
     if (allProps.isNotEmpty) {
       buf.write('    if (');
       buf.write(allProps.map((p) => '${sanitizeFieldName(p.name)} == null').join(' && '));
-      buf.writeln(') return this;');
+      buf.writeln(') { return this; }');
       buf.writeln();
     }
     buf.writeln('    return ${allProps.isEmpty ? "const " : ""}$className(');
@@ -253,12 +253,12 @@ class ModelGenerator {
   static void _generateEquality(StringBuffer buf, List<IrProperty> allProps, String className) {
     buf.writeln('  @override');
     buf.writeln('  bool operator ==(Object other) {');
-    buf.writeln('    if (identical(this, other)) return true;');
+    buf.writeln('    if (identical(this, other)) { return true; }');
     if (allProps.length >= 20) {
-      buf.writeln('    if (other is! $className) return false;');
-      buf.writeln('    if (hashCode != other.hashCode) return false;');
+      buf.writeln('    if (other is! $className) { return false; }');
+      buf.writeln('    if (hashCode != other.hashCode) { return false; }');
     } else {
-      buf.writeln('    if (other is! $className) return false;');
+      buf.writeln('    if (other is! $className) { return false; }');
       buf.write('    return ');
     }
     if (allProps.length < 20) {
