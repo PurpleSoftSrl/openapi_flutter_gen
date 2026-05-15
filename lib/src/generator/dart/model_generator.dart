@@ -643,7 +643,7 @@ class ModelGenerator {
       case IrListSchema():
         if (schema.items is IrObjectSchema || schema.items is IrRefSchema) {
           final itemName = _propertyImportName(schema.items) ?? 'Object';
-          return 'List<$itemName>.generate(($expr as List).length, (i) => $itemName.fromJson(($expr as List)[i] as Map<String, dynamic>), growable: false)';
+          return 'List<$itemName>.generate(($expr as List).length, (i) => $itemName.fromJson(($expr as List)[i]), growable: false)';
         }
         if (schema.items is IrEnumSchema) {
           final enumName = sanitizeClassName((schema.items as IrEnumSchema).name);

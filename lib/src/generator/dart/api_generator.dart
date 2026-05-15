@@ -452,10 +452,10 @@ class ApiGenerator {
         return '${sanitizeClassName(schema.refName)}.fromJson($expr as Map<String, dynamic>)';
       case IrListSchema():
         if (schema.items is IrObjectSchema) {
-          return 'List<${sanitizeClassName((schema.items as IrObjectSchema).name)}>.generate(($expr as List).length, (i) => ${sanitizeClassName((schema.items as IrObjectSchema).name)}.fromJson(($expr as List)[i] as Map<String, dynamic>), growable: false)';
+          return 'List<${sanitizeClassName((schema.items as IrObjectSchema).name)}>.generate(($expr as List).length, (i) => ${sanitizeClassName((schema.items as IrObjectSchema).name)}.fromJson(($expr as List)[i]), growable: false)';
         }
         if (schema.items is IrRefSchema) {
-          return 'List<${sanitizeClassName((schema.items as IrRefSchema).refName)}>.generate(($expr as List).length, (i) => ${sanitizeClassName((schema.items as IrRefSchema).refName)}.fromJson(($expr as List)[i] as Map<String, dynamic>), growable: false)';
+          return 'List<${sanitizeClassName((schema.items as IrRefSchema).refName)}>.generate(($expr as List).length, (i) => ${sanitizeClassName((schema.items as IrRefSchema).refName)}.fromJson(($expr as List)[i]), growable: false)';
         }
         return expr;
       case IrPrimitiveSchema(type: IrPrimitiveType.integer):

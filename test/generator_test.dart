@@ -270,7 +270,7 @@ void main() {
       );
       expect(resultFile.content, contains('sealed class ListPetsResult {'));
       expect(resultFile.content, contains('class ListPetsResultHttp200 extends ListPetsResult'));
-      expect(resultFile.content, contains('factory ListPetsResult.fromResponse(Response response)'));
+      expect(resultFile.content, contains('factory ListPetsResult.fromResponse(Response<dynamic> response)'));
     });
 
     test('generates root ApiClient with auth', () {
