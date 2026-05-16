@@ -1,3 +1,9 @@
+## 0.2.6
+
+- Add dartdoc from OpenAPI spec `description` fields on generated classes
+- Add dartdoc on `fromJson` factory constructors
+- Fix union variant `toJson` return type (Map wrapper)
+
 ## 0.2.5
 
 - Auto-format generated code with `dart format` after generation
