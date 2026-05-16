@@ -172,6 +172,7 @@ class ModelGenerator {
   }
 
   static void _generateFromJson(StringBuffer buf, List<IrProperty> allProps, String className, IrObjectSchema schema) {
+    buf.writeln('  /// Creates an instance from a JSON map.');
     buf.writeln('  factory $className.fromJson(Map<String, dynamic> json) {');
     buf.writeln('    return ${allProps.isEmpty ? "const " : ""}$className(');
 
@@ -466,6 +467,7 @@ class ModelGenerator {
       buf.writeln('  const _$unknownName(this.data);');
       buf.writeln('  final Map<String, dynamic> data;');
       buf.writeln();
+      buf.writeln('  /// Creates an unknown variant instance from a JSON map.');
       buf.writeln('  factory _$unknownName.fromJson(Map<String, dynamic> json) => _$unknownName(json);');
       buf.writeln();
       buf.writeln('  @override');
@@ -522,6 +524,7 @@ class ModelGenerator {
       buf.writeln('  const $varClassName(this.value);');
       buf.writeln('  final $refName value;');
       buf.writeln();
+      buf.writeln('  /// Creates a variant instance from a JSON map.');
       buf.writeln('  factory $varClassName.fromJson(Map<String, dynamic> json) => $varClassName($refName.fromJson(json));');
       buf.writeln();
       buf.writeln('  @override');
@@ -568,11 +571,13 @@ class ModelGenerator {
       buf.writeln('  const $varClassName(this.value);');
       buf.writeln('  final $typeStr value;');
       buf.writeln();
+      buf.writeln('  /// Creates a variant from deserialized JSON.');
       buf.writeln('  factory $varClassName.fromJson(dynamic json) => $varClassName(${_fromJsonExpr('json', variantSchema)});');
       buf.writeln();
       buf.writeln('  @override');
       buf.writeln('  Map<String, dynamic> toJson() => {\'value\': ${_toJsonExpr('value', variantSchema)}};');
       buf.writeln('}');
+
     } else if (variantSchema is IrListSchema) {
       final typeStr = schemaToDartType(variantSchema);
       final fromExpr = _fromJsonExpr('json', variantSchema);
@@ -582,11 +587,13 @@ class ModelGenerator {
       buf.writeln('  const $varClassName(this.value);');
       buf.writeln('  final $typeStr value;');
       buf.writeln();
+      buf.writeln('  /// Creates a list variant from deserialized JSON.');
       buf.writeln('  factory $varClassName.fromJson(dynamic json) => $varClassName($fromExpr);');
       buf.writeln();
       buf.writeln('  @override');
       buf.writeln('  Map<String, dynamic> toJson() => {\'value\': $toExpr};');
       buf.writeln('}');
+
     } else if (variantSchema is IrEnumSchema) {
       final typeStr = schemaToDartType(variantSchema);
       buf.writeln('/// Sealed variant for `$varClassName` in `$className`.');
@@ -594,6 +601,7 @@ class ModelGenerator {
       buf.writeln('  const $varClassName(this.value);');
       buf.writeln('  final $typeStr value;');
       buf.writeln();
+      buf.writeln('  /// Creates an enum variant from deserialized JSON.');
       buf.writeln('  factory $varClassName.fromJson(dynamic json) => $varClassName(${_fromJsonExpr('json', variantSchema)});');
       buf.writeln();
       buf.writeln('  @override');
