@@ -1,3 +1,10 @@
+## 0.2.7
+
+- Fix barrel file generation: export ALL model classes, API service files, and result type files instead of only 5 hardcoded core exports
+- Fix OpenAPI 3.1 nullable type array parsing: `["null","string"]` format now correctly resolves to nullable string instead of `Object?`
+- Add `_extractType()` method to handle type arrays by extracting the first non-null type
+- Add nullable detection from type arrays in `_isSchemaNullable()` for OAS 3.1 spec compatibility
+
 ## 0.2.6
 
 - Add dartdoc from OpenAPI spec `description` fields on generated classes

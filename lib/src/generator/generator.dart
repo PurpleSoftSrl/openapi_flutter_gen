@@ -99,6 +99,8 @@ class CodeGenerator {
       info: doc.info,
       servers: doc.servers,
       securitySchemes: doc.securitySchemes,
+      schemas: doc.schemas,
+      operationsByTag: doc.operationsByTag,
     ));
 
     return files;

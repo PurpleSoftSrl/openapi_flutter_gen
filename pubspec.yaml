@@ -3,7 +3,7 @@ description: >-
   Zero build_runner OpenAPI-to-Dart code generator.
   Produces immutable models, sealed exhaustive responses,
   typed auth interceptors, pagination, and Isolate-based deserialization.
-version: 0.2.6
+version: 0.2.7
 repository: https://github.com/PurpleSoftSrl/openapi_flutter_gen
 issue_tracker: https://github.com/PurpleSoftSrl/openapi_flutter_gen/issues
 topics:

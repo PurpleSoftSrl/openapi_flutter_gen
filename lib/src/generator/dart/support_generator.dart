@@ -8,11 +8,13 @@ class SupportFilesGenerator {
     required IrApiInfo info,
     required List<IrServer> servers,
     required Map<String, IrSecurityScheme> securitySchemes,
+    required Map<String, IrSchema> schemas,
+    required Map<String, List<IrOperation>> operationsByTag,
   }) {
     return [
       _generatePubspec(packageName, info),
       _generateAnalysisOptions(),
-      _generateBarrelFile(packageName),
+      _generateBarrelFile(packageName, schemas: schemas, operationsByTag: operationsByTag),
       _generateInterceptorHelpers(),
       _generatePaginationHelpers(),
       _generateAuth(securitySchemes),
@@ -229,18 +231,63 @@ linter:
     );
   }
 
-  static GeneratedFile _generateBarrelFile(String packageName) {
+  static GeneratedFile _generateBarrelFile(
+    String packageName, {
+    required Map<String, IrSchema> schemas,
+    required Map<String, List<IrOperation>> operationsByTag,
+  }) {
+    final buf = StringBuffer(generateFileHeader());
+    buf.writeln();
+
+    buf.writeln('export \'src/api/api_client.dart\';');
+    buf.writeln();
+    buf.writeln('export \'src/core/interceptors.dart\';');
+    buf.writeln('export \'src/core/pagination.dart\';');
+    buf.writeln('export \'src/core/auth.dart\';');
+    buf.writeln('export \'src/core/error_handler.dart\';');
+
+    final modelExports = <String>[];
+    final seenModels = <String>{};
+    for (final name in schemas.keys) {
+      final fileName = sanitizeClassName(name).toLowerCase();
+      if (seenModels.add(fileName)) {
+        modelExports.add('export \'src/models/$fileName.dart\';');
+      }
+    }
+    if (modelExports.isNotEmpty) {
+      buf.writeln();
+      modelExports.sort();
+      buf.writeln(modelExports.join('\n'));
+    }
+
+    final resultExports = <String>[];
+    final serviceExports = <String>[];
+    final seenResults = <String>{};
+    for (final tag in operationsByTag.keys.toList()..sort()) {
+      final tagFileName = sanitizeClassName(tag).toLowerCase();
+      serviceExports.add('export \'src/api/${tagFileName}_api.dart\';');
+
+      for (final op in operationsByTag[tag]!) {
+        final cleanName = sanitizeFieldName(op.operationId).replaceAll(RegExp(r'_+$'), '');
+        final resultFileName = '${cleanName}_result'.toLowerCase();
+        if (seenResults.add(resultFileName)) {
+          resultExports.add('export \'src/api/$resultFileName.dart\';');
+        }
+      }
+    }
+    if (serviceExports.isNotEmpty) {
+      buf.writeln();
+      buf.writeln(serviceExports.join('\n'));
+    }
+    if (resultExports.isNotEmpty) {
+      buf.writeln();
+      resultExports.sort();
+      buf.writeln(resultExports.join('\n'));
+    }
+
     return GeneratedFile(
       path: 'lib/$packageName.dart',
-      content: '''
-${generateFileHeader()}
-
-export 'src/api/api_client.dart';
-export 'src/core/interceptors.dart';
-export 'src/core/pagination.dart';
-export 'src/core/auth.dart';
-export 'src/core/error_handler.dart';
-''',
+      content: buf.toString(),
     );
   }
 

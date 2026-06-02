@@ -466,7 +466,7 @@ class OpenApiSpecParser {
   }
 
   IrPrimitiveSchema _parsePrimitive(Map<String, dynamic> schemaJson) {
-    final type = getString(schemaJson, 'type') ?? 'object';
+    final type = _extractType(schemaJson);
     final format = getString(schemaJson, 'format');
     final isNullable = _isSchemaNullable(schemaJson);
 
@@ -728,8 +728,21 @@ class OpenApiSpecParser {
     return _toPascalCase(parts.last);
   }
 
+  static String _extractType(Map<String, dynamic> schemaJson) {
+    final raw = schemaJson['type'];
+    if (raw is String) return raw;
+    if (raw is List && raw.isNotEmpty) {
+      for (final t in raw) {
+        if (t is String && t != 'null') return t;
+      }
+    }
+    return 'object';
+  }
+
   static bool _isSchemaNullable(Map<String, dynamic> schemaJson) {
     if (schemaJson.containsKey('nullable') && schemaJson['nullable'] == true) return true;
+    final typeRaw = schemaJson['type'];
+    if (typeRaw is List && typeRaw.any((t) => t == 'null')) return true;
     if (schemaJson.containsKey('oneOf')) {
       final items = schemaJson['oneOf'] as List<dynamic>?;
       if (items != null) {
