@@ -185,6 +185,11 @@ void main() {
       expect(generated.content, contains('PetStatus.fromJson(json[\'status\'] as String'));
       expect(generated.content, contains('Category.fromJson(json[\'category\'] as Map<String, dynamic>'));
       expect(generated.content, contains('DateTime.parse(json[\'createdAt\'] as String'));
+      // Primitive lists must be re-wrapped via .cast<T>(): a decoded JSON array is a
+      // List<dynamic> at runtime, so a direct `as List<String>` cast throws. Regression
+      // guard for the login/roles deserialization crash.
+      expect(generated.content, contains('(json[\'photoUrls\'] as List).cast<String>()'));
+      expect(generated.content, isNot(contains('as List<String>')));
     });
 
     test('generates PetStatus enum correctly', () {

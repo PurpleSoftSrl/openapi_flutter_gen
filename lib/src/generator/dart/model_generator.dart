@@ -680,14 +680,17 @@ class ModelGenerator {
           return 'List<$enumName>.generate(($expr as List).length, (i) => $enumName.fromJson(($expr as List<dynamic>)[i] as $enumType), growable: false)';
         }
         final inner = schemaToDartType(schema.items);
-        return '$expr as List<$inner>';
+        // A decoded JSON array is a List<dynamic> at runtime; a direct `as List<T>`
+        // cast throws even when every element is a T. Use .cast<T>() to re-wrap it.
+        return '($expr as List).cast<$inner>()';
       case IrMapSchema():
         final valSchema = schema.values;
         if (valSchema is IrObjectSchema || valSchema is IrRefSchema) {
           final valName = _propertyImportName(valSchema) ?? 'Object';
           return '($expr as Map<String, dynamic>).map((k, v) => MapEntry(k, $valName.fromJson(v)))';
         }
-        return '$expr as Map<String, ${schemaToDartType(schema.values)}>';
+        // Same dynamic-typing issue as primitive lists: re-wrap via .cast<K,V>().
+        return '($expr as Map).cast<String, ${schemaToDartType(schema.values)}>()';
     }
   }
 
