@@ -1,3 +1,7 @@
+## 0.2.8
+
+- Fix primitive list/map `fromJson` deserialization: emit `(expr as List).cast<T>()` and `(expr as Map).cast<K, V>()` instead of a direct `expr as List<T>` / `as Map<K, V>` cast. A decoded JSON array/object is always `List<dynamic>` / `Map<String, dynamic>` at runtime, so the direct cast threw `type 'List<dynamic>' is not a subtype of type 'List<String>'` — crashing deserialization of any model with a primitive array (e.g. a login response `roles` field, breaking authentication). Now consistent with the `.cast<T>()` already used in `type_utils.dart`.
+
 ## 0.2.7
 
 - Fix barrel file generation: export ALL model classes, API service files, and result type files instead of only 5 hardcoded core exports
