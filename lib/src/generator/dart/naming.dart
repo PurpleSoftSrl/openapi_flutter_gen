@@ -74,11 +74,11 @@ environment:
   sdk: '>=3.4.0 <4.0.0'
 
 dependencies:
-  dio: ^5.7.0
-  collection: ^1.19.0
+  dio: 
+  collection: 
 
 dev_dependencies:
-  lints: ^4.0.0
-  test: ^1.25.0
+  lints: 
+  test: 
 ''';
 }
