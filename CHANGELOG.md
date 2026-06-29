@@ -1,3 +1,9 @@
+## 0.2.10
+
+- Rewrite README comparison table: replaced non-OpenAPI tools (retrofit, chopper, ferry) with real pub.dev competitors (swagger_dart_code_generator, swagger_parser, openapi_generator, space_gen, openapi_spec), verified by source code analysis
+- Add "Standalone CLI" row to comparison table
+- Update install instructions to ^0.2.10
+
 ## 0.2.9
 
 - Bump dev dependencies: `lints` ^6.1.0, `test` ^1.31.2

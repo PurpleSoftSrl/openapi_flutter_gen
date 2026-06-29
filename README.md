@@ -13,20 +13,27 @@
 
 ## Why this exists
 
-Other Dart API client tools (retrofit, chopper, ferry) require `build_runner` to run in YOUR project, every time the spec changes. They generate `.g.dart` files you must commit and maintain.
+Most Dart/Flutter OpenAPI generators require `build_runner` to run in YOUR project, every time the spec changes. They generate `.g.dart` files you must commit and maintain, slowing your builds and coupling your app to code-gen tooling.
 
-**openapi_flutter_gen** runs once as a CLI. It produces standalone `.dart` source files — immutable models, typed API services, sealed exhaustive responses, auth interceptors, pagination helpers. Commit them, import them, done.
+**openapi_flutter_gen** runs once as a standalone CLI. It produces standalone `.dart` source files — immutable models, typed API services, sealed exhaustive responses, auth interceptors, pagination helpers. Commit them, import them, done.
 
-| | openapi_flutter_gen | retrofit | chopper | ferry |
-|---|---|---|---|---|
-| Zero build_runner in consumer | ✅ | ❌ | ❌ | ❌ |
-| Sealed exhaustive responses | ✅ | ❌ | ❌ | ❌ |
-| Immutable models (const) | ✅ | ✅ | ❌ | ✅ |
-| Typed auth from spec | ✅ | ❌ | ❌ | ❌ |
-| Multipart/FormData | ✅ | ✅ | ✅ | ❌ |
-| Pagination helpers | ✅ | ❌ | ❌ | ❌ |
-| Isolate JSON deserialization | ✅ | ❌ | ❌ | ❌ |
-| Swagger 2.0 support | ✅ | ❌ | ❌ | ❌ |
+### Comparison with real OpenAPI generators on pub.dev
+
+Features verified by cloning and analyzing each competitor's source code (June 2026).
+
+| Feature | openapi_flutter_gen | swagger_dart_code_generator | swagger_parser | openapi_generator | space_gen | openapi_spec |
+|---|---|---|---|---|---|---|
+| Zero build_runner in consumer | ✅ | ❌ | ❌ | ✅ | ✅ | ❌ |
+| Sealed exhaustive responses | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ |
+| Immutable models (const) | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
+| Typed auth from spec | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Multipart/FormData | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Pagination helpers | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Isolate JSON deserialization | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Swagger 2.0 support | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| oneOf / allOf / anyOf | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| copyWith / == / hashCode | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
+| Standalone CLI (no host project) | ✅ | ❌ | ❌ | ✅ | ✅ | ❌ |
 
 ---
 
@@ -40,7 +47,7 @@ Or add to your project's `dev_dependencies`:
 
 ```yaml
 dev_dependencies:
-  openapi_flutter_gen: ^0.2.6
+  openapi_flutter_gen: ^0.2.10
 ```
 
 ---
