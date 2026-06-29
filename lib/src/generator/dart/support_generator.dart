@@ -14,7 +14,8 @@ class SupportFilesGenerator {
     return [
       _generatePubspec(packageName, info),
       _generateAnalysisOptions(),
-      _generateBarrelFile(packageName, schemas: schemas, operationsByTag: operationsByTag),
+      _generateBarrelFile(packageName,
+          schemas: schemas, operationsByTag: operationsByTag),
       _generateInterceptorHelpers(),
       _generatePaginationHelpers(),
       _generateAuth(securitySchemes),
@@ -84,11 +85,15 @@ class ApiErrorInterceptor extends Interceptor {
   }
 }
 ''';
-    return GeneratedFile(path: 'lib/src/core/error_handler.dart', content: content);
+    return GeneratedFile(
+        path: 'lib/src/core/error_handler.dart', content: content);
   }
 
   static GeneratedFile _generateAuth(Map<String, IrSecurityScheme> schemes) {
-    if (schemes.isEmpty) return GeneratedFile(path: 'lib/src/core/auth.dart', content: '// No security schemes defined\n');
+    if (schemes.isEmpty)
+      return GeneratedFile(
+          path: 'lib/src/core/auth.dart',
+          content: '// No security schemes defined\n');
 
     final buf = StringBuffer(generateFileHeader());
     buf.writeln('import \'package:dio/dio.dart\';');
@@ -106,14 +111,16 @@ class ApiErrorInterceptor extends Interceptor {
           final headerName = 'Authorization';
 
           buf.writeln('class $className {');
-          buf.writeln('  $className({this.token, this.tokenProvider, this.headerName = \'$headerName\', this.tokenPrefix = \'$prefix\'});');
+          buf.writeln(
+              '  $className({this.token, this.tokenProvider, this.headerName = \'$headerName\', this.tokenPrefix = \'$prefix\'});');
           buf.writeln();
           buf.writeln('  final String? token;');
           buf.writeln('  final Future<String> Function()? tokenProvider;');
           buf.writeln('  final String headerName;');
           buf.writeln('  final String tokenPrefix;');
           buf.writeln();
-          buf.writeln('  Interceptor createInterceptor() => _${className}Interceptor(this);');
+          buf.writeln(
+              '  Interceptor createInterceptor() => _${className}Interceptor(this);');
           buf.writeln('}');
           buf.writeln();
           buf.writeln('class _${className}Interceptor extends Interceptor {');
@@ -121,11 +128,13 @@ class ApiErrorInterceptor extends Interceptor {
           buf.writeln('  final $className security;');
           buf.writeln();
           buf.writeln('  @override');
-          buf.writeln('  void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {');
+          buf.writeln(
+              '  void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {');
           buf.writeln('    var token = security.token;');
           buf.writeln('    token ??= await security.tokenProvider?.call();');
           buf.writeln('    if (token != null) {');
-          buf.writeln('      options.headers[security.headerName] = \'\${security.tokenPrefix}\$token\';');
+          buf.writeln(
+              '      options.headers[security.headerName] = \'\${security.tokenPrefix}\$token\';');
           buf.writeln('    }');
           buf.writeln('    handler.next(options);');
           buf.writeln('  }');
@@ -138,13 +147,15 @@ class ApiErrorInterceptor extends Interceptor {
           buf.writeln('enum ${className}Location { header, query, cookie }');
           buf.writeln();
           buf.writeln('class $className {');
-          buf.writeln('  $className({required this.apiKey, this.keyName = \'$paramName\', this.location = ${className}Location.header});');
+          buf.writeln(
+              '  $className({required this.apiKey, this.keyName = \'$paramName\', this.location = ${className}Location.header});');
           buf.writeln();
           buf.writeln('  final String apiKey;');
           buf.writeln('  final String keyName;');
           buf.writeln('  final ${className}Location location;');
           buf.writeln();
-          buf.writeln('  Interceptor createInterceptor() => _${className}Interceptor(this);');
+          buf.writeln(
+              '  Interceptor createInterceptor() => _${className}Interceptor(this);');
           buf.writeln('}');
           buf.writeln();
           buf.writeln('class _${className}Interceptor extends Interceptor {');
@@ -152,14 +163,18 @@ class ApiErrorInterceptor extends Interceptor {
           buf.writeln('  final $className security;');
           buf.writeln();
           buf.writeln('  @override');
-          buf.writeln('  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {');
+          buf.writeln(
+              '  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {');
           buf.writeln('    switch (security.location) {');
           buf.writeln('      case ${className}Location.header:');
-          buf.writeln('        options.headers[security.keyName] = security.apiKey;');
+          buf.writeln(
+              '        options.headers[security.keyName] = security.apiKey;');
           buf.writeln('      case ${className}Location.query:');
-          buf.writeln('        options.queryParameters[security.keyName] = security.apiKey;');
+          buf.writeln(
+              '        options.queryParameters[security.keyName] = security.apiKey;');
           buf.writeln('      case ${className}Location.cookie:');
-          buf.writeln('        options.headers[\'Cookie\'] = \'\${security.keyName}=\${security.apiKey}\';');
+          buf.writeln(
+              '        options.headers[\'Cookie\'] = \'\${security.keyName}=\${security.apiKey}\';');
           buf.writeln('    }');
           buf.writeln('    handler.next(options);');
           buf.writeln('  }');
@@ -170,13 +185,16 @@ class ApiErrorInterceptor extends Interceptor {
         case 'oauth2':
         case 'openIdConnect':
           buf.writeln('class $className {');
-          buf.writeln('  $className({this.accessToken, this.tokenProvider, this.scopes = const {}});');
+          buf.writeln(
+              '  $className({this.accessToken, this.tokenProvider, this.scopes = const {}});');
           buf.writeln();
           buf.writeln('  final String? accessToken;');
-          buf.writeln('  final Future<String> Function(Iterable<String> scopes)? tokenProvider;');
+          buf.writeln(
+              '  final Future<String> Function(Iterable<String> scopes)? tokenProvider;');
           buf.writeln('  final Set<String> scopes;');
           buf.writeln();
-          buf.writeln('  Interceptor createInterceptor() => _${className}Interceptor(this);');
+          buf.writeln(
+              '  Interceptor createInterceptor() => _${className}Interceptor(this);');
           buf.writeln('}');
           buf.writeln();
           buf.writeln('class _${className}Interceptor extends Interceptor {');
@@ -184,11 +202,14 @@ class ApiErrorInterceptor extends Interceptor {
           buf.writeln('  final $className security;');
           buf.writeln();
           buf.writeln('  @override');
-          buf.writeln('  void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {');
+          buf.writeln(
+              '  void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {');
           buf.writeln('    var token = security.accessToken;');
-          buf.writeln('    token ??= await security.tokenProvider?.call(security.scopes);');
+          buf.writeln(
+              '    token ??= await security.tokenProvider?.call(security.scopes);');
           buf.writeln('    if (token != null) {');
-          buf.writeln('      options.headers[\'Authorization\'] = \'Bearer \$token\';');
+          buf.writeln(
+              '      options.headers[\'Authorization\'] = \'Bearer \$token\';');
           buf.writeln('    }');
           buf.writeln('    handler.next(options);');
           buf.writeln('  }');
@@ -198,20 +219,23 @@ class ApiErrorInterceptor extends Interceptor {
 
         default:
           buf.writeln('class $className {');
-          buf.writeln('  Interceptor createInterceptor() => _NoopInterceptor();');
+          buf.writeln(
+              '  Interceptor createInterceptor() => _NoopInterceptor();');
           buf.writeln('}');
           buf.writeln();
           break;
       }
     }
 
-    return GeneratedFile(path: 'lib/src/core/auth.dart', content: buf.toString());
+    return GeneratedFile(
+        path: 'lib/src/core/auth.dart', content: buf.toString());
   }
 
   static GeneratedFile _generatePubspec(String packageName, IrApiInfo info) {
     return GeneratedFile(
       path: 'pubspec.yaml',
-      content: generatePubspecContent(packageName, info.description ?? 'Generated API client for ${info.title}'),
+      content: generatePubspecContent(packageName,
+          info.description ?? 'Generated API client for ${info.title}'),
     );
   }
 
@@ -268,7 +292,8 @@ linter:
       serviceExports.add('export \'src/api/${tagFileName}_api.dart\';');
 
       for (final op in operationsByTag[tag]!) {
-        final cleanName = sanitizeFieldName(op.operationId).replaceAll(RegExp(r'_+$'), '');
+        final cleanName =
+            sanitizeFieldName(op.operationId).replaceAll(RegExp(r'_+$'), '');
         final resultFileName = '${cleanName}_result'.toLowerCase();
         if (seenResults.add(resultFileName)) {
           resultExports.add('export \'src/api/$resultFileName.dart\';');
@@ -387,7 +412,8 @@ class LoggingInterceptor extends Interceptor {
 }
 ''';
 
-    return GeneratedFile(path: 'lib/src/core/interceptors.dart', content: content);
+    return GeneratedFile(
+        path: 'lib/src/core/interceptors.dart', content: content);
   }
 
   static GeneratedFile _generatePaginationHelpers() {
@@ -471,6 +497,7 @@ extension PaginationExtension<T> on Future<PaginatedResponse<T>> {
 }
 ''';
 
-    return GeneratedFile(path: 'lib/src/core/pagination.dart', content: content);
+    return GeneratedFile(
+        path: 'lib/src/core/pagination.dart', content: content);
   }
 }

@@ -284,7 +284,15 @@ enum IrParameterLocation { path, query, header, cookie }
 
 /// Encoding style for a parameter.
 
-enum IrEncodingStyle { simple, label, matrix, form, spaceDelimited, pipeDelimited, deepObject }
+enum IrEncodingStyle {
+  simple,
+  label,
+  matrix,
+  form,
+  spaceDelimited,
+  pipeDelimited,
+  deepObject
+}
 
 /// A request body definition.
 

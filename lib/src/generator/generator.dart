@@ -31,9 +31,12 @@ class CodeGenerator {
 
   Future<void> generate() async {
     final outputPath = p.join(outputDir, packageName);
-    await Directory(p.join(outputPath, 'lib', 'src', 'models')).create(recursive: true);
-    await Directory(p.join(outputPath, 'lib', 'src', 'api')).create(recursive: true);
-    await Directory(p.join(outputPath, 'lib', 'src', 'core')).create(recursive: true);
+    await Directory(p.join(outputPath, 'lib', 'src', 'models'))
+        .create(recursive: true);
+    await Directory(p.join(outputPath, 'lib', 'src', 'api'))
+        .create(recursive: true);
+    await Directory(p.join(outputPath, 'lib', 'src', 'core'))
+        .create(recursive: true);
 
     final files = _collectAllFiles();
 
@@ -71,7 +74,8 @@ class CodeGenerator {
 
     for (final entry in doc.schemas.entries) {
       try {
-        files.add(ModelGenerator.generate(entry.value, packageName: packageName, schemaName: entry.key));
+        files.add(ModelGenerator.generate(entry.value,
+            packageName: packageName, schemaName: entry.key));
       } catch (e) {
         print('Warning: Failed to generate model for ${entry.key}: $e');
       }
@@ -106,7 +110,8 @@ class CodeGenerator {
     return files;
   }
 
-  Future<void> _writeWithIsolates(List<GeneratedFile> files, String basePath) async {
+  Future<void> _writeWithIsolates(
+      List<GeneratedFile> files, String basePath) async {
     final chunkSize = 8;
     final futures = <Future>[];
 
@@ -120,10 +125,12 @@ class CodeGenerator {
 
   Future<void> _writeChunk(List<GeneratedFile> files, String basePath) async {
     final receivePort = ReceivePort();
-    final isolateFiles = files.map((f) => {
-      'path': p.join(basePath, f.path),
-      'content': f.content,
-    }).toList();
+    final isolateFiles = files
+        .map((f) => {
+              'path': p.join(basePath, f.path),
+              'content': f.content,
+            })
+        .toList();
 
     await Isolate.spawn(_writeIsolate, [receivePort.sendPort, isolateFiles]);
 

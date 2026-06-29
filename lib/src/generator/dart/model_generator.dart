@@ -3,19 +3,24 @@ import '../../util/type_utils.dart';
 import 'naming.dart';
 
 class ModelGenerator {
-  static GeneratedFile generate(IrSchema schema, {required String packageName, String? schemaName}) {
+  static GeneratedFile generate(IrSchema schema,
+      {required String packageName, String? schemaName}) {
     return switch (schema) {
       IrObjectSchema() => _generateObject(schema, packageName: packageName),
       IrEnumSchema() => _generateEnum(schema, packageName: packageName),
       IrUnionSchema() => _generateUnion(schema, packageName: packageName),
-      IrPrimitiveSchema() => _generatePrimitive(schema, schemaName: schemaName!, packageName: packageName),
-      IrListSchema() => _generateObjectAlias(schema, schemaName: schemaName!, packageName: packageName),
-      IrRefSchema() => throw UnimplementedError('Ref schemas should be resolved'),
+      IrPrimitiveSchema() => _generatePrimitive(schema,
+          schemaName: schemaName!, packageName: packageName),
+      IrListSchema() => _generateObjectAlias(schema,
+          schemaName: schemaName!, packageName: packageName),
+      IrRefSchema() =>
+        throw UnimplementedError('Ref schemas should be resolved'),
       _ => throw UnimplementedError('Unexpected schema type: $schema'),
     };
   }
 
-  static GeneratedFile _generatePrimitive(IrPrimitiveSchema schema, {required String schemaName, required String packageName}) {
+  static GeneratedFile _generatePrimitive(IrPrimitiveSchema schema,
+      {required String schemaName, required String packageName}) {
     final className = sanitizeClassName(schemaName);
     final dartType = dartTypeFromPrimitive(schema.type);
     final buf = StringBuffer(generateFileHeader());
@@ -27,7 +32,8 @@ class ModelGenerator {
     );
   }
 
-  static GeneratedFile _generateObjectAlias(IrListSchema schema, {required String schemaName, required String packageName}) {
+  static GeneratedFile _generateObjectAlias(IrListSchema schema,
+      {required String schemaName, required String packageName}) {
     final className = sanitizeClassName(schemaName);
     final itemType = schemaToDartType(schema.items);
     final importName = _schemaImportName(schema.items);
@@ -44,7 +50,8 @@ class ModelGenerator {
     );
   }
 
-  static GeneratedFile _generateObject(IrObjectSchema schema, {required String packageName}) {
+  static GeneratedFile _generateObject(IrObjectSchema schema,
+      {required String packageName}) {
     final buf = StringBuffer(generateFileHeader());
 
     final allProps = <IrProperty>[];
@@ -98,19 +105,19 @@ class ModelGenerator {
     } else {
       buf.writeln('  const $className({');
 
-    for (final prop in allProps) {
-      final isRequired = prop.isRequired && !prop.isNullable;
-      final defaultValue = _defaultValueFor(prop);
-      final defStr = defaultValue != null ? ' = $defaultValue' : '';
-      buf.write('    ');
-      if (isRequired && defaultValue == null) {
-        buf.writeln('required this.${sanitizeFieldName(prop.name)},');
-      } else {
-        buf.writeln('this.${sanitizeFieldName(prop.name)}$defStr,');
+      for (final prop in allProps) {
+        final isRequired = prop.isRequired && !prop.isNullable;
+        final defaultValue = _defaultValueFor(prop);
+        final defStr = defaultValue != null ? ' = $defaultValue' : '';
+        buf.write('    ');
+        if (isRequired && defaultValue == null) {
+          buf.writeln('required this.${sanitizeFieldName(prop.name)},');
+        } else {
+          buf.writeln('this.${sanitizeFieldName(prop.name)}$defStr,');
+        }
       }
-    }
 
-    buf.writeln('  });');
+      buf.writeln('  });');
     }
     buf.writeln();
 
@@ -132,12 +139,14 @@ class ModelGenerator {
 
     buf.writeln('}');
     return GeneratedFile(
-      path: 'lib/src/models/${sanitizeClassName(schema.name).toLowerCase()}.dart',
+      path:
+          'lib/src/models/${sanitizeClassName(schema.name).toLowerCase()}.dart',
       content: buf.toString(),
     );
   }
 
-  static void _generateToFormData(StringBuffer buf, List<IrProperty> allProps, String className) {
+  static void _generateToFormData(
+      StringBuffer buf, List<IrProperty> allProps, String className) {
     buf.writeln();
     buf.writeln('  FormData toFormData() {');
     buf.writeln('    final fd = FormData();');
@@ -146,24 +155,29 @@ class ModelGenerator {
       final jsonKey = prop.jsonKey ?? prop.name;
       final schema = prop.schema;
       final isRequiredAndNonNullable = prop.isRequired && !prop.isNullable;
-      if (schema is IrPrimitiveSchema && schema.type == IrPrimitiveType.binary) {
+      if (schema is IrPrimitiveSchema &&
+          schema.type == IrPrimitiveType.binary) {
         if (isRequiredAndNonNullable) {
-          buf.writeln('    fd.files.add(MapEntry(\'$jsonKey\', MultipartFile.fromBytes(');
+          buf.writeln(
+              '    fd.files.add(MapEntry(\'$jsonKey\', MultipartFile.fromBytes(');
           buf.writeln('      $fieldName, filename: \'$jsonKey\',');
           buf.writeln('    )));');
         } else {
           buf.writeln('    if ($fieldName != null) {');
           buf.writeln('      final bytesCopy = $fieldName;');
-          buf.writeln('      fd.files.add(MapEntry(\'$jsonKey\', MultipartFile.fromBytes(');
+          buf.writeln(
+              '      fd.files.add(MapEntry(\'$jsonKey\', MultipartFile.fromBytes(');
           buf.writeln('        bytesCopy!, filename: \'$jsonKey\',');
           buf.writeln('      )));');
           buf.writeln('    }');
         }
       } else if (isRequiredAndNonNullable) {
-        buf.writeln('    fd.fields.add(MapEntry(\'$jsonKey\', $fieldName.toString()));');
+        buf.writeln(
+            '    fd.fields.add(MapEntry(\'$jsonKey\', $fieldName.toString()));');
       } else {
         buf.writeln('    if ($fieldName != null) {');
-        buf.writeln('      fd.fields.add(MapEntry(\'$jsonKey\', $fieldName.toString()));');
+        buf.writeln(
+            '      fd.fields.add(MapEntry(\'$jsonKey\', $fieldName.toString()));');
         buf.writeln('    }');
       }
     }
@@ -171,7 +185,8 @@ class ModelGenerator {
     buf.writeln('  }');
   }
 
-  static void _generateFromJson(StringBuffer buf, List<IrProperty> allProps, String className, IrObjectSchema schema) {
+  static void _generateFromJson(StringBuffer buf, List<IrProperty> allProps,
+      String className, IrObjectSchema schema) {
     buf.writeln('  /// Creates an instance from a JSON map.');
     buf.writeln('  factory $className.fromJson(Map<String, dynamic> json) {');
     buf.writeln('    return ${allProps.isEmpty ? "const " : ""}$className(');
@@ -184,10 +199,12 @@ class ModelGenerator {
       final jsonKey = prop.jsonKey ?? prop.name;
 
       if (prop.isRequired && !prop.isNullable) {
-        buf.writeln('      $fieldName: ${_fromJsonExpr("json['$jsonKey']", prop.schema)},');
+        buf.writeln(
+            '      $fieldName: ${_fromJsonExpr("json['$jsonKey']", prop.schema)},');
       } else {
         buf.writeln('      $fieldName: json[\'$jsonKey\'] != null');
-        buf.writeln('          ? ${_fromJsonExpr("json['$jsonKey']", prop.schema)}');
+        buf.writeln(
+            '          ? ${_fromJsonExpr("json['$jsonKey']", prop.schema)}');
         buf.writeln('          : null,');
       }
     }
@@ -197,7 +214,8 @@ class ModelGenerator {
     buf.writeln();
   }
 
-  static void _generateToJson(StringBuffer buf, List<IrProperty> allProps, String className) {
+  static void _generateToJson(
+      StringBuffer buf, List<IrProperty> allProps, String className) {
     buf.writeln('  Map<String, dynamic> toJson() {');
     buf.writeln('    return {');
 
@@ -206,11 +224,14 @@ class ModelGenerator {
       final jsonKey = prop.jsonKey ?? prop.name;
 
       if (prop.isRequired && !prop.isNullable) {
-        buf.writeln('      \'$jsonKey\': ${_toJsonExpr(fieldName, prop.schema)},');
+        buf.writeln(
+            '      \'$jsonKey\': ${_toJsonExpr(fieldName, prop.schema)},');
       } else if (prop.isRequired && prop.isNullable) {
-        buf.writeln('      \'$jsonKey\': ${_toJsonExprNullable(fieldName, prop.schema)},');
+        buf.writeln(
+            '      \'$jsonKey\': ${_toJsonExprNullable(fieldName, prop.schema)},');
       } else {
-        buf.writeln('      if ($fieldName != null) \'$jsonKey\': ${_toJsonExpr('$fieldName!', prop.schema)},');
+        buf.writeln(
+            '      if ($fieldName != null) \'$jsonKey\': ${_toJsonExpr('$fieldName!', prop.schema)},');
       }
     }
 
@@ -219,7 +240,8 @@ class ModelGenerator {
     buf.writeln();
   }
 
-  static void _generateCopyWith(StringBuffer buf, List<IrProperty> allProps, String className) {
+  static void _generateCopyWith(
+      StringBuffer buf, List<IrProperty> allProps, String className) {
     if (allProps.isEmpty) {
       buf.writeln('  $className copyWith() {');
       buf.writeln('    return this;');
@@ -232,14 +254,17 @@ class ModelGenerator {
 
     for (final prop in allProps) {
       var rawType = schemaToDartType(prop.schema);
-      if (rawType.endsWith('?')) rawType = rawType.substring(0, rawType.length - 1);
+      if (rawType.endsWith('?'))
+        rawType = rawType.substring(0, rawType.length - 1);
       buf.writeln('    $rawType? ${sanitizeFieldName(prop.name)},');
     }
 
     buf.writeln('  }) {');
     if (allProps.isNotEmpty) {
       buf.write('    if (');
-      buf.write(allProps.map((p) => '${sanitizeFieldName(p.name)} == null').join(' && '));
+      buf.write(allProps
+          .map((p) => '${sanitizeFieldName(p.name)} == null')
+          .join(' && '));
       buf.writeln(') { return this; }');
       buf.writeln();
     }
@@ -259,7 +284,8 @@ class ModelGenerator {
     buf.writeln();
   }
 
-  static void _generateEquality(StringBuffer buf, List<IrProperty> allProps, String className) {
+  static void _generateEquality(
+      StringBuffer buf, List<IrProperty> allProps, String className) {
     buf.writeln('  @override');
     buf.writeln('  bool operator ==(Object other) {');
     buf.writeln('    if (identical(this, other)) { return true; }');
@@ -335,20 +361,26 @@ class ModelGenerator {
     buf.writeln();
   }
 
-  static void _generateToString(StringBuffer buf, List<IrProperty> allProps, String className) {
+  static void _generateToString(
+      StringBuffer buf, List<IrProperty> allProps, String className) {
     buf.writeln('  @override');
     buf.write('  String toString() => \'$className(');
-    buf.write(allProps.map((p) => '${sanitizeFieldName(p.name)}=\$${sanitizeFieldName(p.name)}').join(', '));
+    buf.write(allProps
+        .map((p) =>
+            '${sanitizeFieldName(p.name)}=\$${sanitizeFieldName(p.name)}')
+        .join(', '));
     buf.writeln(')\';');
   }
 
-  static GeneratedFile _generateEnum(IrEnumSchema schema, {required String packageName}) {
+  static GeneratedFile _generateEnum(IrEnumSchema schema,
+      {required String packageName}) {
     final buf = StringBuffer(generateFileHeader());
     buf.writeln('// ignore_for_file: constant_identifier_names');
     buf.writeln();
     final className = sanitizeClassName(schema.name);
 
-    final typeStr = schema.enumType == IrPrimitiveType.string ? 'String' : 'int';
+    final typeStr =
+        schema.enumType == IrPrimitiveType.string ? 'String' : 'int';
 
     final schemaValues = schema.values;
     final desc = schema.description;
@@ -364,8 +396,10 @@ class ModelGenerator {
     for (int i = 0; i < schemaValues.length; i++) {
       final value = schemaValues[i];
       final comma = i < schemaValues.length - 1 ? ',' : ';';
-      if (schema.enumType == IrPrimitiveType.string && value.jsonValue != null) {
-        buf.writeln('  ${safeDartName(value.name)}(\'${value.jsonValue}\')$comma');
+      if (schema.enumType == IrPrimitiveType.string &&
+          value.jsonValue != null) {
+        buf.writeln(
+            '  ${safeDartName(value.name)}(\'${value.jsonValue}\')$comma');
       } else {
         buf.writeln('  ${safeDartName(value.name)}$comma');
       }
@@ -383,7 +417,8 @@ class ModelGenerator {
     if (schema.enumType == IrPrimitiveType.string) {
       buf.writeln('    return $className.values.firstWhere(');
       buf.writeln('      (e) => e.name == json || e.value == json,');
-      buf.writeln('      orElse: () => throw ArgumentError(\'Unknown $className: \$json\'),');
+      buf.writeln(
+          '      orElse: () => throw ArgumentError(\'Unknown $className: \$json\'),');
       buf.writeln('    );');
     } else {
       buf.writeln('    return $className.values[(json as num).toInt()];');
@@ -391,17 +426,20 @@ class ModelGenerator {
     buf.writeln('  }');
     buf.writeln();
 
-    buf.writeln('  $typeStr toJson() => ${schema.enumType == IrPrimitiveType.string ? 'value' : 'index'};');
+    buf.writeln(
+        '  $typeStr toJson() => ${schema.enumType == IrPrimitiveType.string ? 'value' : 'index'};');
 
     buf.writeln('}');
 
     return GeneratedFile(
-      path: 'lib/src/models/${sanitizeClassName(schema.name).toLowerCase()}.dart',
+      path:
+          'lib/src/models/${sanitizeClassName(schema.name).toLowerCase()}.dart',
       content: buf.toString(),
     );
   }
 
-  static GeneratedFile _generateUnion(IrUnionSchema schema, {required String packageName}) {
+  static GeneratedFile _generateUnion(IrUnionSchema schema,
+      {required String packageName}) {
     final buf = StringBuffer(generateFileHeader());
     buf.writeln('// ignore_for_file: unused_import, unnecessary_cast');
     buf.writeln();
@@ -415,7 +453,8 @@ class ModelGenerator {
         imports.add(importName);
       }
       if (variant.schema is IrPrimitiveSchema &&
-          (variant.schema as IrPrimitiveSchema).type == IrPrimitiveType.binary) {
+          (variant.schema as IrPrimitiveSchema).type ==
+              IrPrimitiveType.binary) {
         needsTypedData = true;
       }
     }
@@ -445,7 +484,8 @@ class ModelGenerator {
       buf.writeln('  Map<String, dynamic> toJson() => switch (this) {');
       for (final variant in schema.variants) {
         final discValue = variant.discriminatorValue ?? '';
-        final varClassName = _variantClassName(className, discValue, schema.variants.indexOf(variant));
+        final varClassName = _variantClassName(
+            className, discValue, schema.variants.indexOf(variant));
         buf.writeln('    $varClassName v => v.toJson(),');
       }
       buf.writeln('  };');
@@ -468,7 +508,8 @@ class ModelGenerator {
       buf.writeln('  final Map<String, dynamic> data;');
       buf.writeln();
       buf.writeln('  /// Creates an unknown variant instance from a JSON map.');
-      buf.writeln('  factory _$unknownName.fromJson(Map<String, dynamic> json) => _$unknownName(json);');
+      buf.writeln(
+          '  factory _$unknownName.fromJson(Map<String, dynamic> json) => _$unknownName(json);');
       buf.writeln();
       buf.writeln('  @override');
       buf.writeln('  Map<String, dynamic> toJson() => data;');
@@ -477,7 +518,8 @@ class ModelGenerator {
     }
 
     return GeneratedFile(
-      path: 'lib/src/models/${sanitizeClassName(schema.name).toLowerCase()}.dart',
+      path:
+          'lib/src/models/${sanitizeClassName(schema.name).toLowerCase()}.dart',
       content: buf.toString(),
     );
   }
@@ -492,7 +534,8 @@ class ModelGenerator {
       buf.writeln('    return switch (json[\'$discriminator\'] as String?) {');
       for (final variant in schema.variants) {
         final discValue = variant.discriminatorValue ?? '';
-        final varClassName = _variantClassName(className, discValue, schema.variants.indexOf(variant));
+        final varClassName = _variantClassName(
+            className, discValue, schema.variants.indexOf(variant));
         buf.writeln('      \'$discValue\' => $varClassName.fromJson(json),');
       }
       buf.writeln('      _ => _${className}Unknown.fromJson(json),');
@@ -502,15 +545,18 @@ class ModelGenerator {
         final variant = schema.variants[i];
         final discValue = variant.discriminatorValue ?? '';
         final varClassName = _variantClassName(className, discValue, i);
-        buf.writeln('    try { return $varClassName.fromJson(json); } catch (_) {}');
+        buf.writeln(
+            '    try { return $varClassName.fromJson(json); } catch (_) {}');
       }
-      buf.writeln("    throw FormatException('Cannot decode $className', json);");
+      buf.writeln(
+          "    throw FormatException('Cannot decode $className', json);");
     }
 
     buf.writeln('  }');
   }
 
-  static void _generateUnionVariant(StringBuffer buf, int index, IrUnionSchema schema) {
+  static void _generateUnionVariant(
+      StringBuffer buf, int index, IrUnionSchema schema) {
     final className = sanitizeClassName(schema.name);
     final variant = schema.variants[index];
     final discValue = variant.discriminatorValue ?? '';
@@ -525,7 +571,8 @@ class ModelGenerator {
       buf.writeln('  final $refName value;');
       buf.writeln();
       buf.writeln('  /// Creates a variant instance from a JSON map.');
-      buf.writeln('  factory $varClassName.fromJson(Map<String, dynamic> json) => $varClassName($refName.fromJson(json));');
+      buf.writeln(
+          '  factory $varClassName.fromJson(Map<String, dynamic> json) => $varClassName($refName.fromJson(json));');
       buf.writeln();
       buf.writeln('  @override');
       buf.writeln('  Map<String, dynamic> toJson() => value.toJson();');
@@ -536,20 +583,24 @@ class ModelGenerator {
       buf.writeln('  const $varClassName({');
       for (final prop in variantSchema.properties) {
         final isReq = prop.isRequired && !prop.isNullable;
-        buf.writeln('    ${isReq ? 'required ' : ''}this.${sanitizeFieldName(prop.name)},');
+        buf.writeln(
+            '    ${isReq ? 'required ' : ''}this.${sanitizeFieldName(prop.name)},');
       }
       buf.writeln('  });');
 
       for (final prop in variantSchema.properties) {
-        buf.writeln('  final ${schemaToDartType(prop.schema)} ${sanitizeFieldName(prop.name)};');
+        buf.writeln(
+            '  final ${schemaToDartType(prop.schema)} ${sanitizeFieldName(prop.name)};');
       }
       buf.writeln();
 
-      buf.writeln('  factory $varClassName.fromJson(Map<String, dynamic> json) => $varClassName(');
+      buf.writeln(
+          '  factory $varClassName.fromJson(Map<String, dynamic> json) => $varClassName(');
       for (final prop in variantSchema.properties) {
         final fieldName = sanitizeFieldName(prop.name);
         final jsonKey = prop.jsonKey ?? prop.name;
-        buf.writeln('    $fieldName: ${_fromJsonExpr('json[\'$jsonKey\']', prop.schema)},');
+        buf.writeln(
+            '    $fieldName: ${_fromJsonExpr('json[\'$jsonKey\']', prop.schema)},');
       }
       buf.writeln('  );');
       buf.writeln();
@@ -559,7 +610,8 @@ class ModelGenerator {
       for (final prop in variantSchema.properties) {
         final fieldName = sanitizeFieldName(prop.name);
         final jsonKey = prop.jsonKey ?? prop.name;
-        buf.writeln('    \'$jsonKey\': ${_toJsonExpr(fieldName, prop.schema)},');
+        buf.writeln(
+            '    \'$jsonKey\': ${_toJsonExpr(fieldName, prop.schema)},');
       }
       buf.writeln('  };');
 
@@ -572,12 +624,13 @@ class ModelGenerator {
       buf.writeln('  final $typeStr value;');
       buf.writeln();
       buf.writeln('  /// Creates a variant from deserialized JSON.');
-      buf.writeln('  factory $varClassName.fromJson(dynamic json) => $varClassName(${_fromJsonExpr('json', variantSchema)});');
+      buf.writeln(
+          '  factory $varClassName.fromJson(dynamic json) => $varClassName(${_fromJsonExpr('json', variantSchema)});');
       buf.writeln();
       buf.writeln('  @override');
-      buf.writeln('  Map<String, dynamic> toJson() => {\'value\': ${_toJsonExpr('value', variantSchema)}};');
+      buf.writeln(
+          '  Map<String, dynamic> toJson() => {\'value\': ${_toJsonExpr('value', variantSchema)}};');
       buf.writeln('}');
-
     } else if (variantSchema is IrListSchema) {
       final typeStr = schemaToDartType(variantSchema);
       final fromExpr = _fromJsonExpr('json', variantSchema);
@@ -588,12 +641,12 @@ class ModelGenerator {
       buf.writeln('  final $typeStr value;');
       buf.writeln();
       buf.writeln('  /// Creates a list variant from deserialized JSON.');
-      buf.writeln('  factory $varClassName.fromJson(dynamic json) => $varClassName($fromExpr);');
+      buf.writeln(
+          '  factory $varClassName.fromJson(dynamic json) => $varClassName($fromExpr);');
       buf.writeln();
       buf.writeln('  @override');
       buf.writeln('  Map<String, dynamic> toJson() => {\'value\': $toExpr};');
       buf.writeln('}');
-
     } else if (variantSchema is IrEnumSchema) {
       final typeStr = schemaToDartType(variantSchema);
       buf.writeln('/// Sealed variant for `$varClassName` in `$className`.');
@@ -602,15 +655,18 @@ class ModelGenerator {
       buf.writeln('  final $typeStr value;');
       buf.writeln();
       buf.writeln('  /// Creates an enum variant from deserialized JSON.');
-      buf.writeln('  factory $varClassName.fromJson(dynamic json) => $varClassName(${_fromJsonExpr('json', variantSchema)});');
+      buf.writeln(
+          '  factory $varClassName.fromJson(dynamic json) => $varClassName(${_fromJsonExpr('json', variantSchema)});');
       buf.writeln();
       buf.writeln('  @override');
-      buf.writeln('  Map<String, dynamic> toJson() => {\'value\': ${_toJsonExpr('value', variantSchema)}};');
+      buf.writeln(
+          '  Map<String, dynamic> toJson() => {\'value\': ${_toJsonExpr('value', variantSchema)}};');
       buf.writeln('}');
     }
   }
 
-  static String _variantClassName(String parentName, String discValue, int index) {
+  static String _variantClassName(
+      String parentName, String discValue, int index) {
     if (discValue.isEmpty) return '${parentName}Variant$index';
     final disc = sanitizeClassName(discValue);
     if (disc.startsWith(parentName)) return '${disc}Variant$index';
@@ -675,8 +731,12 @@ class ModelGenerator {
           return 'List<$itemName>.generate(($expr as List).length, (i) => $itemName.fromJson(($expr as List)[i] as Map<String, dynamic>), growable: false)';
         }
         if (schema.items is IrEnumSchema) {
-          final enumName = sanitizeClassName((schema.items as IrEnumSchema).name);
-          final enumType = (schema.items as IrEnumSchema).enumType == IrPrimitiveType.integer ? 'int' : 'String';
+          final enumName =
+              sanitizeClassName((schema.items as IrEnumSchema).name);
+          final enumType =
+              (schema.items as IrEnumSchema).enumType == IrPrimitiveType.integer
+                  ? 'int'
+                  : 'String';
           return 'List<$enumName>.generate(($expr as List).length, (i) => $enumName.fromJson(($expr as List<dynamic>)[i] as $enumType), growable: false)';
         }
         final inner = schemaToDartType(schema.items);
@@ -716,7 +776,9 @@ class ModelGenerator {
           return '$expr.map((k, v) => MapEntry(k, v.toJson()))';
         }
         return expr;
-      case IrPrimitiveSchema(type: IrPrimitiveType.dateTime || IrPrimitiveType.date):
+      case IrPrimitiveSchema(
+          type: IrPrimitiveType.dateTime || IrPrimitiveType.date
+        ):
         return '$expr.toIso8601String()';
       case IrPrimitiveSchema(type: IrPrimitiveType.uri):
         return '$expr.toString()';
@@ -751,7 +813,6 @@ class ModelGenerator {
     }
     return null;
   }
-
 }
 
 class GeneratedFile {

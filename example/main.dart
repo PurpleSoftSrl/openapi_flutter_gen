@@ -2,7 +2,8 @@ import 'package:openapi_flutter_gen/openapi_flutter_gen.dart';
 
 Future<void> main(List<String> args) async {
   if (args.isEmpty) {
-    print('Usage: dart run example/main.dart <spec-file> [output-dir] [--use-compute]');
+    print(
+        'Usage: dart run example/main.dart <spec-file> [output-dir] [--use-compute]');
     return;
   }
 

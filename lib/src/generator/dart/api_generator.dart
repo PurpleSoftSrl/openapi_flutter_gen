@@ -15,10 +15,12 @@ class ApiGenerator {
     for (final entry in operationsByTag.entries) {
       final tag = entry.key;
       final ops = entry.value;
-      files.add(_generateService(tag, ops, packageName: packageName, servers: servers, useCompute: useCompute));
+      files.add(_generateService(tag, ops,
+          packageName: packageName, servers: servers, useCompute: useCompute));
 
       for (final op in ops) {
-        final responseGen = _generateOperationResponse(op, packageName: packageName, useCompute: useCompute);
+        final responseGen = _generateOperationResponse(op,
+            packageName: packageName, useCompute: useCompute);
         if (responseGen != null) files.add(responseGen);
       }
     }
@@ -72,7 +74,8 @@ class ApiGenerator {
 
     final resultImports = <String>{};
     for (final op in ops) {
-      final cleanName = sanitizeFieldName(op.operationId).replaceAll(RegExp(r'_+$'), '');
+      final cleanName =
+          sanitizeFieldName(op.operationId).replaceAll(RegExp(r'_+$'), '');
       final resultFileName = '${cleanName}_result';
       resultImports.add(resultFileName);
     }
@@ -100,7 +103,9 @@ class ApiGenerator {
     );
   }
 
-  static void _generateOperationMethod(StringBuffer buf, IrOperation op, String className, {bool useCompute = false}) {
+  static void _generateOperationMethod(
+      StringBuffer buf, IrOperation op, String className,
+      {bool useCompute = false}) {
     final methodName = sanitizeFieldName(op.operationId);
     final httpMethod = op.httpMethod.toLowerCase();
     final resultType = '${sanitizeClassName(op.operationId)}Result';
@@ -121,15 +126,17 @@ class ApiGenerator {
 
     final hasPreviousParams = methodParams.isNotEmpty;
     if (hasPreviousParams) buf.writeln();
-    
+
     buf.write('    ');
     buf.writeln('CancelToken? cancelToken,');
     buf.writeln('    Map<String, dynamic>? extra,');
     buf.writeln('    Options? options,');
     buf.writeln('  }) async {');
 
-    final hasHeaderParams = op.parameters.any((p) => p.location == IrParameterLocation.header);
-    final hasQueryParams = op.parameters.any((p) => p.location == IrParameterLocation.query);
+    final hasHeaderParams =
+        op.parameters.any((p) => p.location == IrParameterLocation.header);
+    final hasQueryParams =
+        op.parameters.any((p) => p.location == IrParameterLocation.query);
 
     if (hasHeaderParams) {
       buf.writeln('    final reqHeaders = <String, dynamic>{};');
@@ -142,10 +149,12 @@ class ApiGenerator {
       final pName = sanitizeFieldName(param.name);
       switch (param.location) {
         case IrParameterLocation.header:
-          buf.writeln('    if ($pName != null) { reqHeaders[\'${param.name}\'] = ${_serializeParamExpr(pName, param.schema)}; }');
+          buf.writeln(
+              '    if ($pName != null) { reqHeaders[\'${param.name}\'] = ${_serializeParamExpr(pName, param.schema)}; }');
           break;
         case IrParameterLocation.query:
-          buf.writeln('    if ($pName != null) { reqQueryParams[\'${param.name}\'] = ${_serializeParamExpr(pName, param.schema)}; }');
+          buf.writeln(
+              '    if ($pName != null) { reqQueryParams[\'${param.name}\'] = ${_serializeParamExpr(pName, param.schema)}; }');
           break;
         default:
           break;
@@ -156,17 +165,21 @@ class ApiGenerator {
 
     final pathUrl = _buildPathUrl(op);
 
-    buf.writeln('    final response = await dio.request<Map<String, dynamic>>(');
+    buf.writeln(
+        '    final response = await dio.request<Map<String, dynamic>>(');
     buf.writeln('      \'$pathUrl\',');
 
     final hasBody = op.requestBody != null &&
         op.requestBody!.content.isNotEmpty &&
         op.requestBody!.content.values.first.schema != null;
-    final isMultipart = hasBody && op.requestBody!.content.keys.any((ct) => ct.contains('multipart'));
-    final isBinary = hasBody && op.requestBody!.content.values.any((mt) {
-      final s = mt.schema;
-      return s is IrPrimitiveSchema && s.type == IrPrimitiveType.binary;
-    }) && !isMultipart;
+    final isMultipart = hasBody &&
+        op.requestBody!.content.keys.any((ct) => ct.contains('multipart'));
+    final isBinary = hasBody &&
+        op.requestBody!.content.values.any((mt) {
+          final s = mt.schema;
+          return s is IrPrimitiveSchema && s.type == IrPrimitiveType.binary;
+        }) &&
+        !isMultipart;
 
     if (hasBody) {
       final paramName = _bodyParamName(op) ?? 'body';
@@ -182,7 +195,9 @@ class ApiGenerator {
       } else {
         String suffix;
         if (needsToJson && bodySchema is IrListSchema) {
-          suffix = isRequired ? '.map((e) => e.toJson()).toList()' : '?.map((e) => e.toJson()).toList()';
+          suffix = isRequired
+              ? '.map((e) => e.toJson()).toList()'
+              : '?.map((e) => e.toJson()).toList()';
         } else if (needsToJson) {
           suffix = isRequired ? '.toJson()' : '?.toJson()';
         } else {
@@ -192,13 +207,15 @@ class ApiGenerator {
       }
     }
 
-    final hasBinaryResponse = op.responses.any((r) => r.content.values.any((mt) {
-      final s = mt.schema;
-      return s is IrPrimitiveSchema && s.type == IrPrimitiveType.binary;
-    }));
+    final hasBinaryResponse =
+        op.responses.any((r) => r.content.values.any((mt) {
+              final s = mt.schema;
+              return s is IrPrimitiveSchema && s.type == IrPrimitiveType.binary;
+            }));
 
     if (hasQueryParams) {
-      buf.write('      queryParameters: reqQueryParams.isNotEmpty ? reqQueryParams : null,');
+      buf.write(
+          '      queryParameters: reqQueryParams.isNotEmpty ? reqQueryParams : null,');
     } else {
       buf.write('      queryParameters: null,');
     }
@@ -206,7 +223,8 @@ class ApiGenerator {
     buf.writeln('      options: options ?? Options(');
     buf.writeln('        method: \'$httpMethod\',');
     if (hasHeaderParams) {
-      buf.writeln('        headers: reqHeaders.isNotEmpty ? reqHeaders : null,');
+      buf.writeln(
+          '        headers: reqHeaders.isNotEmpty ? reqHeaders : null,');
     } else {
       buf.writeln('        headers: null,');
     }
@@ -223,7 +241,8 @@ class ApiGenerator {
       final funcName = 'deserialize${sanitizeClassName(op.operationId)}';
       buf.writeln('    final statusCode = response.statusCode ?? 0;');
       buf.writeln('    final data = response.data;');
-      buf.writeln('    return Isolate.run(() => $funcName((statusCode: statusCode, data: data)));');
+      buf.writeln(
+          '    return Isolate.run(() => $funcName((statusCode: statusCode, data: data)));');
     } else {
       buf.writeln('    return $resultType.fromResponse(response);');
     }
@@ -301,7 +320,8 @@ class ApiGenerator {
     return path;
   }
 
-  static GeneratedFile? _generateOperationResponse(IrOperation op, {required String packageName, bool useCompute = false}) {
+  static GeneratedFile? _generateOperationResponse(IrOperation op,
+      {required String packageName, bool useCompute = false}) {
     final buf = StringBuffer(generateFileHeader());
     buf.writeln('// ignore_for_file: unused_import, unnecessary_cast');
     buf.writeln();
@@ -358,7 +378,8 @@ class ApiGenerator {
     }
 
     return GeneratedFile(
-      path: 'lib/src/api/${sanitizeClassName(op.operationId).toLowerCase()}_result.dart',
+      path:
+          'lib/src/api/${sanitizeClassName(op.operationId).toLowerCase()}_result.dart',
       content: buf.toString(),
     );
   }
@@ -366,7 +387,8 @@ class ApiGenerator {
   static void _generateResultFromResponse(StringBuffer buf, IrOperation op) {
     final className = '${sanitizeClassName(op.operationId)}Result';
 
-    buf.writeln('  factory $className.fromResponse(Response<dynamic> response) {');
+    buf.writeln(
+        '  factory $className.fromResponse(Response<dynamic> response) {');
     buf.writeln('    final statusCode = response.statusCode ?? 0;');
     buf.writeln('    return switch (statusCode) {');
 
@@ -388,14 +410,15 @@ class ApiGenerator {
     }
 
     final defaultResp = op.responses.cast<IrResponse?>().firstWhere(
-      (r) => r?.statusCode == 'default',
-      orElse: () => null,
-    );
+          (r) => r?.statusCode == 'default',
+          orElse: () => null,
+        );
 
     if (defaultResp != null) {
       final defaultSchema = defaultResp.content.values.firstOrNull?.schema;
       if (defaultSchema != null) {
-        buf.writeln('      _ => ${className}HttpDefault(${_fromJsonExpr('response.data', defaultSchema)}),');
+        buf.writeln(
+            '      _ => ${className}HttpDefault(${_fromJsonExpr('response.data', defaultSchema)}),');
       } else {
         buf.writeln('      _ => const ${className}HttpDefault(),');
       }
@@ -407,8 +430,10 @@ class ApiGenerator {
     buf.writeln('  }');
   }
 
-  static void _generateResultVariant(StringBuffer buf, IrResponse resp, String parentName) {
-    final statusName = resp.statusCode == 'default' ? 'Default' : resp.statusCode;
+  static void _generateResultVariant(
+      StringBuffer buf, IrResponse resp, String parentName) {
+    final statusName =
+        resp.statusCode == 'default' ? 'Default' : resp.statusCode;
     final variantName = '${parentName}Http$statusName';
     final mt = resp.content.values.firstOrNull;
     final schema = mt?.schema;
@@ -434,7 +459,8 @@ class ApiGenerator {
       buf.writeln('  const ${parentName}Error(this.response);');
       buf.writeln('  final Response<dynamic> response;');
       buf.writeln();
-      buf.writeln('  factory ${parentName}Error.fromResponse(Response<dynamic> response) => ${parentName}Error(response);');
+      buf.writeln(
+          '  factory ${parentName}Error.fromResponse(Response<dynamic> response) => ${parentName}Error(response);');
       buf.writeln('}');
     }
   }
@@ -497,7 +523,8 @@ class ApiGenerator {
     buf.writeln();
 
     for (final tag in operationsByTag.keys) {
-      buf.writeln('import \'${sanitizeClassName(tag).toLowerCase()}_api.dart\';');
+      buf.writeln(
+          'import \'${sanitizeClassName(tag).toLowerCase()}_api.dart\';');
     }
     buf.writeln();
 
@@ -523,19 +550,24 @@ class ApiGenerator {
     if (securitySchemes.isNotEmpty) {
       buf.writeln(' {');
       buf.writeln('    _dio.options.baseUrl = baseUrl;');
-      buf.writeln('    if (errorHandler != null) { _addInterceptor(errorHandler!); }');
+      buf.writeln(
+          '    if (errorHandler != null) { _addInterceptor(errorHandler!); }');
       for (final entry in securitySchemes.entries) {
         final camelName = sanitizeFieldName(entry.key);
         buf.writeln('    final ${camelName}Copy = $camelName;');
-        buf.writeln('    if (${camelName}Copy != null) { _addInterceptor(${camelName}Copy.createInterceptor()); }');
+        buf.writeln(
+            '    if (${camelName}Copy != null) { _addInterceptor(${camelName}Copy.createInterceptor()); }');
       }
-      buf.writeln('    if (interceptors != null) { _addInterceptors(interceptors!); }');
+      buf.writeln(
+          '    if (interceptors != null) { _addInterceptors(interceptors!); }');
       buf.writeln('  }');
     } else {
       buf.writeln(' {');
       buf.writeln('    _dio.options.baseUrl = baseUrl;');
-      buf.writeln('    if (errorHandler != null) { _addInterceptor(errorHandler!); }');
-      buf.writeln('    if (interceptors != null) { _addInterceptors(interceptors!); }');
+      buf.writeln(
+          '    if (errorHandler != null) { _addInterceptor(errorHandler!); }');
+      buf.writeln(
+          '    if (interceptors != null) { _addInterceptors(interceptors!); }');
       buf.writeln('  }');
     }
     buf.writeln();
@@ -554,20 +586,25 @@ class ApiGenerator {
     buf.writeln('  bool _initialized = false;');
     buf.writeln();
 
-    buf.writeln('  void _addInterceptor(Interceptor interceptor) => _dio.interceptors.add(interceptor);');
-    buf.writeln('  void _addInterceptors(List<Interceptor> interceptors) => _dio.interceptors.addAll(interceptors);');
+    buf.writeln(
+        '  void _addInterceptor(Interceptor interceptor) => _dio.interceptors.add(interceptor);');
+    buf.writeln(
+        '  void _addInterceptors(List<Interceptor> interceptors) => _dio.interceptors.addAll(interceptors);');
     buf.writeln();
 
     buf.writeln('  Dio get dio {');
     buf.writeln('    if (!_initialized) {');
     buf.writeln('      _initialized = true;');
-      buf.writeln('      if (errorHandler != null) { _addInterceptor(errorHandler!); }');
+    buf.writeln(
+        '      if (errorHandler != null) { _addInterceptor(errorHandler!); }');
     for (final entry in securitySchemes.entries) {
       final camelName = sanitizeFieldName(entry.key);
       buf.writeln('      final ${camelName}Copy = $camelName;');
-      buf.writeln('      if (${camelName}Copy != null) { _addInterceptor(${camelName}Copy.createInterceptor()); }');
+      buf.writeln(
+          '      if (${camelName}Copy != null) { _addInterceptor(${camelName}Copy.createInterceptor()); }');
     }
-    buf.writeln('      if (interceptors != null) { _addInterceptors(interceptors!); }');
+    buf.writeln(
+        '      if (interceptors != null) { _addInterceptors(interceptors!); }');
     buf.writeln('    }');
     buf.writeln('    return _dio;');
     buf.writeln('  }');
@@ -576,7 +613,8 @@ class ApiGenerator {
     for (final tag in operationsByTag.keys) {
       final fieldName = sanitizeFieldName(tag);
       final className = '${sanitizeClassName(tag)}Api';
-      buf.writeln('  $className get $fieldName => $className(dio: dio, baseUrl: baseUrl);');
+      buf.writeln(
+          '  $className get $fieldName => $className(dio: dio, baseUrl: baseUrl);');
     }
 
     buf.writeln('}');
@@ -587,9 +625,11 @@ class ApiGenerator {
     );
   }
 
-  static void _generateComputeDeserializer(StringBuffer buf, IrOperation op, String className) {
+  static void _generateComputeDeserializer(
+      StringBuffer buf, IrOperation op, String className) {
     final funcName = 'deserialize${sanitizeClassName(op.operationId)}';
-    buf.writeln('$className $funcName(({int statusCode, dynamic data}) args) {');
+    buf.writeln(
+        '$className $funcName(({int statusCode, dynamic data}) args) {');
     buf.writeln('  final (:statusCode, :data) = args;');
     buf.writeln('  return switch (statusCode) {');
 
@@ -602,13 +642,15 @@ class ApiGenerator {
       final schema = mt?.schema;
 
       if (schema != null) {
-        buf.writeln('    $status => $variantName(${_fromJsonExpr('data', schema)}),');
+        buf.writeln(
+            '    $status => $variantName(${_fromJsonExpr('data', schema)}),');
       } else {
         buf.writeln('    $status => const $variantName(),');
       }
     }
 
-    buf.writeln('    _ => throw FormatException(\'Unknown status code: \$statusCode\', data),');
+    buf.writeln(
+        '    _ => throw FormatException(\'Unknown status code: \$statusCode\', data),');
     buf.writeln('  };');
     buf.writeln('}');
   }
@@ -616,13 +658,20 @@ class ApiGenerator {
   static bool _needsToJson(IrSchema? schema) {
     if (schema == null) return false;
     switch (schema) {
-      case IrObjectSchema(): return true;
-      case IrRefSchema(): return true;
-      case IrEnumSchema(): return true;
-      case IrUnionSchema(): return true;
-      case IrListSchema(): return _needsToJson(schema.items);
-      case IrMapSchema(): return _needsToJson(schema.values);
-      default: return false;
+      case IrObjectSchema():
+        return true;
+      case IrRefSchema():
+        return true;
+      case IrEnumSchema():
+        return true;
+      case IrUnionSchema():
+        return true;
+      case IrListSchema():
+        return _needsToJson(schema.items);
+      case IrMapSchema():
+        return _needsToJson(schema.values);
+      default:
+        return false;
     }
   }
 }

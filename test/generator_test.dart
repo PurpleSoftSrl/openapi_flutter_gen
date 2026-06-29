@@ -22,7 +22,7 @@ void _cleanupDir(Directory d) {
 }
 
 final String petstorePath = p.normalize(
-    p.join(p.current, 'test', 'fixtures', 'petstore.json'),
+  p.join(p.current, 'test', 'fixtures', 'petstore.json'),
 );
 
 void main() {
@@ -30,7 +30,8 @@ void main() {
   late IrApiDocument apiDoc;
 
   setUpAll(() async {
-    petstoreJson = json.decode(await File(petstorePath).readAsString()) as Map<String, dynamic>;
+    petstoreJson = json.decode(await File(petstorePath).readAsString())
+        as Map<String, dynamic>;
     final parser = OpenApiSpecParser(petstoreJson);
     apiDoc = parser.parse();
   });
@@ -55,7 +56,8 @@ void main() {
     });
 
     test('parses petstore.json and has expected operations', () {
-      final operationIds = apiDoc.operations.map((op) => op.operationId).toSet();
+      final operationIds =
+          apiDoc.operations.map((op) => op.operationId).toSet();
       expect(operationIds, contains('listPets'));
       expect(operationIds, contains('createPet'));
       expect(operationIds, contains('getPet'));
@@ -84,7 +86,8 @@ void main() {
 
     test('parses servers correctly', () {
       expect(apiDoc.servers.length, greaterThan(0));
-      expect(apiDoc.servers.first.url, equals('https://petstore.example.com/api/v1'));
+      expect(apiDoc.servers.first.url,
+          equals('https://petstore.example.com/api/v1'));
     });
 
     test('parses security schemes', () {
@@ -152,7 +155,8 @@ void main() {
     });
 
     test('generates Pet model with fromJson/toJson', () {
-      final generated = ModelGenerator.generate(petSchema, packageName: 'test_api');
+      final generated =
+          ModelGenerator.generate(petSchema, packageName: 'test_api');
       expect(generated.path, contains('pet.dart'));
       expect(generated.content, contains('class Pet {'));
       expect(generated.content, contains('const Pet({'));
@@ -160,7 +164,8 @@ void main() {
       expect(generated.content, contains('required this.name'));
       expect(generated.content, contains('this.tag'));
       expect(generated.content, contains('this.status'));
-      expect(generated.content, contains('factory Pet.fromJson(Map<String, dynamic> json)'));
+      expect(generated.content,
+          contains('factory Pet.fromJson(Map<String, dynamic> json)'));
       expect(generated.content, contains('Map<String, dynamic> toJson()'));
       expect(generated.content, contains('Pet copyWith({'));
       expect(generated.content, contains('bool operator ==(Object other)'));
@@ -168,7 +173,8 @@ void main() {
     });
 
     test('generates Pet model with correct field types', () {
-      final generated = ModelGenerator.generate(petSchema, packageName: 'test_api');
+      final generated =
+          ModelGenerator.generate(petSchema, packageName: 'test_api');
       expect(generated.content, contains('final int id;'));
       expect(generated.content, contains('final String name;'));
       expect(generated.content, contains('final String? tag;'));
@@ -179,37 +185,48 @@ void main() {
     });
 
     test('generates Pet model with correct fromJson deserialization', () {
-      final generated = ModelGenerator.generate(petSchema, packageName: 'test_api');
+      final generated =
+          ModelGenerator.generate(petSchema, packageName: 'test_api');
       expect(generated.content, contains('(json[\'id\'] as num).toInt()'));
       expect(generated.content, contains('json[\'name\'] as String'));
-      expect(generated.content, contains('PetStatus.fromJson(json[\'status\'] as String'));
-      expect(generated.content, contains('Category.fromJson(json[\'category\'] as Map<String, dynamic>'));
-      expect(generated.content, contains('DateTime.parse(json[\'createdAt\'] as String'));
+      expect(generated.content,
+          contains('PetStatus.fromJson(json[\'status\'] as String'));
+      expect(
+          generated.content,
+          contains(
+              'Category.fromJson(json[\'category\'] as Map<String, dynamic>'));
+      expect(generated.content,
+          contains('DateTime.parse(json[\'createdAt\'] as String'));
       // Primitive lists must be re-wrapped via .cast<T>(): a decoded JSON array is a
       // List<dynamic> at runtime, so a direct `as List<String>` cast throws. Regression
       // guard for the login/roles deserialization crash.
-      expect(generated.content, contains('(json[\'photoUrls\'] as List).cast<String>()'));
+      expect(generated.content,
+          contains('(json[\'photoUrls\'] as List).cast<String>()'));
       expect(generated.content, isNot(contains('as List<String>')));
     });
 
     test('generates PetStatus enum correctly', () {
-      final generated = ModelGenerator.generate(petStatusSchema, packageName: 'test_api');
+      final generated =
+          ModelGenerator.generate(petStatusSchema, packageName: 'test_api');
       expect(generated.path, contains('petstatus.dart'));
       expect(generated.content, contains('enum PetStatus {'));
       expect(generated.content, contains("available('available'),"));
       expect(generated.content, contains("pending('pending'),"));
       expect(generated.content, contains("sold('sold');"));
-      expect(generated.content, contains('static PetStatus fromJson(String json)'));
+      expect(generated.content,
+          contains('static PetStatus fromJson(String json)'));
       expect(generated.content, contains('String toJson()'));
     });
 
     test('generated code has no double commas', () {
-      final generated = ModelGenerator.generate(petSchema, packageName: 'test_api');
+      final generated =
+          ModelGenerator.generate(petSchema, packageName: 'test_api');
       expect(generated.content, isNot(contains(',,')));
     });
 
     test('generated code has no double quotes issues', () {
-      final generated = ModelGenerator.generate(petSchema, packageName: 'test_api');
+      final generated =
+          ModelGenerator.generate(petSchema, packageName: 'test_api');
       expect(generated.content, isNot(contains('""')));
       expect(generated.content, isNot(contains("''")));
     });
@@ -236,9 +253,11 @@ void main() {
         packageName: 'test_api',
         servers: apiDoc.servers,
       );
-      final petsApiFile = files.firstWhere((f) => f.path.contains('pets_api.dart'));
+      final petsApiFile =
+          files.firstWhere((f) => f.path.contains('pets_api.dart'));
       expect(petsApiFile.content, contains('class PetsApi {'));
-      expect(petsApiFile.content, contains('const PetsApi({required this.dio, this.baseUrl});'));
+      expect(petsApiFile.content,
+          contains('const PetsApi({required this.dio, this.baseUrl});'));
     });
 
     test('generates listPets method in PetsApi', () {
@@ -247,8 +266,10 @@ void main() {
         packageName: 'test_api',
         servers: apiDoc.servers,
       );
-      final petsApiFile = files.firstWhere((f) => f.path.contains('pets_api.dart'));
-      expect(petsApiFile.content, contains('Future<ListPetsResult> listPets({'));
+      final petsApiFile =
+          files.firstWhere((f) => f.path.contains('pets_api.dart'));
+      expect(
+          petsApiFile.content, contains('Future<ListPetsResult> listPets({'));
     });
 
     test('generates createPet method in PetsApi with body', () {
@@ -257,8 +278,10 @@ void main() {
         packageName: 'test_api',
         servers: apiDoc.servers,
       );
-      final petsApiFile = files.firstWhere((f) => f.path.contains('pets_api.dart'));
-      expect(petsApiFile.content, contains('Future<CreatePetResult> createPet({'));
+      final petsApiFile =
+          files.firstWhere((f) => f.path.contains('pets_api.dart'));
+      expect(
+          petsApiFile.content, contains('Future<CreatePetResult> createPet({'));
       expect(petsApiFile.content, contains('CreatePetRequest'));
     });
 
@@ -268,7 +291,8 @@ void main() {
         packageName: 'test_api',
         servers: apiDoc.servers,
       );
-      final petsApiFile = files.firstWhere((f) => f.path.contains('pets_api.dart'));
+      final petsApiFile =
+          files.firstWhere((f) => f.path.contains('pets_api.dart'));
       expect(petsApiFile.content, contains('Future<GetPetResult> getPet({'));
       expect(petsApiFile.content, contains('required int petId'));
     });
@@ -284,8 +308,12 @@ void main() {
         orElse: () => fail('listpets_result.dart not found'),
       );
       expect(resultFile.content, contains('sealed class ListPetsResult {'));
-      expect(resultFile.content, contains('class ListPetsResultHttp200 extends ListPetsResult'));
-      expect(resultFile.content, contains('factory ListPetsResult.fromResponse(Response<dynamic> response)'));
+      expect(resultFile.content,
+          contains('class ListPetsResultHttp200 extends ListPetsResult'));
+      expect(
+          resultFile.content,
+          contains(
+              'factory ListPetsResult.fromResponse(Response<dynamic> response)'));
     });
 
     test('generates root ApiClient with auth', () {
@@ -307,8 +335,10 @@ void main() {
         servers: apiDoc.servers,
       );
       for (final f in files) {
-        expect(f.content, isNot(contains(',,')), reason: 'Double comma in ${f.path}');
-        expect(f.content, isNot(contains(';;')), reason: 'Double semicolon in ${f.path}');
+        expect(f.content, isNot(contains(',,')),
+            reason: 'Double comma in ${f.path}');
+        expect(f.content, isNot(contains(';;')),
+            reason: 'Double semicolon in ${f.path}');
       }
     });
 
@@ -341,14 +371,20 @@ void main() {
         final outputPath = p.join(tempDir.path, 'petstore_client');
         expect(Directory(outputPath).existsSync(), isTrue);
         expect(File(p.join(outputPath, 'pubspec.yaml')).existsSync(), isTrue);
-        expect(File(p.join(outputPath, 'analysis_options.yaml')).existsSync(), isTrue);
+        expect(File(p.join(outputPath, 'analysis_options.yaml')).existsSync(),
+            isTrue);
 
-        final barrelFile = File(p.join(outputPath, 'lib', 'petstore_client.dart'));
+        final barrelFile =
+            File(p.join(outputPath, 'lib', 'petstore_client.dart'));
         expect(barrelFile.existsSync(), isTrue);
 
         final modelsDir = Directory(p.join(outputPath, 'lib', 'src', 'models'));
         expect(modelsDir.existsSync(), isTrue);
-        final modelFiles = modelsDir.listSync().whereType<File>().map((f) => p.basename(f.path)).toList();
+        final modelFiles = modelsDir
+            .listSync()
+            .whereType<File>()
+            .map((f) => p.basename(f.path))
+            .toList();
         expect(modelFiles, contains('pet.dart'));
         expect(modelFiles, contains('user.dart'));
         expect(modelFiles, contains('order.dart'));
@@ -356,7 +392,11 @@ void main() {
 
         final apiDir = Directory(p.join(outputPath, 'lib', 'src', 'api'));
         expect(apiDir.existsSync(), isTrue);
-        final apiFiles = apiDir.listSync().whereType<File>().map((f) => p.basename(f.path)).toList();
+        final apiFiles = apiDir
+            .listSync()
+            .whereType<File>()
+            .map((f) => p.basename(f.path))
+            .toList();
         expect(apiFiles, contains('pets_api.dart'));
         expect(apiFiles, contains('users_api.dart'));
         expect(apiFiles, contains('orders_api.dart'));
@@ -365,9 +405,12 @@ void main() {
         final coreDir = Directory(p.join(outputPath, 'lib', 'src', 'core'));
         expect(coreDir.existsSync(), isTrue);
         expect(File(p.join(coreDir.path, 'auth.dart')).existsSync(), isTrue);
-        expect(File(p.join(coreDir.path, 'error_handler.dart')).existsSync(), isTrue);
-        expect(File(p.join(coreDir.path, 'interceptors.dart')).existsSync(), isTrue);
-        expect(File(p.join(coreDir.path, 'pagination.dart')).existsSync(), isTrue);
+        expect(File(p.join(coreDir.path, 'error_handler.dart')).existsSync(),
+            isTrue);
+        expect(File(p.join(coreDir.path, 'interceptors.dart')).existsSync(),
+            isTrue);
+        expect(
+            File(p.join(coreDir.path, 'pagination.dart')).existsSync(), isTrue);
       } finally {
         _cleanupDir(tempDir);
       }
@@ -385,19 +428,23 @@ void main() {
         );
         await generator.generate();
 
-        final petFile = File(p.join(tempDir.path, 'test_api', 'lib', 'src', 'models', 'pet.dart'));
+        final petFile = File(p.join(
+            tempDir.path, 'test_api', 'lib', 'src', 'models', 'pet.dart'));
         final content = petFile.readAsStringSync();
         expect(content, isNot(contains(',,')), reason: 'Found double comma');
-        expect(content, isNot(contains(';;')), reason: 'Found double semicolon');
+        expect(content, isNot(contains(';;')),
+            reason: 'Found double semicolon');
         expect(content, isNot(contains('{{')), reason: 'Found double brace');
         expect(content, isNot(contains('}}')), reason: 'Found double brace');
-        expect(content, isNot(contains("''")), reason: 'Found empty string quotes');
+        expect(content, isNot(contains("''")),
+            reason: 'Found empty string quotes');
       } finally {
         _cleanupDir(tempDir);
       }
     });
 
-    test('generated code files have no trailing commas in required params', () async {
+    test('generated code files have no trailing commas in required params',
+        () async {
       final tempDir = Directory.systemTemp.createTempSync('oafg_test3_');
       try {
         final generator = CodeGenerator(
@@ -409,16 +456,20 @@ void main() {
         );
         await generator.generate();
 
-        final modelsDir = Directory(p.join(tempDir.path, 'test_api', 'lib', 'src', 'models'));
+        final modelsDir =
+            Directory(p.join(tempDir.path, 'test_api', 'lib', 'src', 'models'));
         for (final file in modelsDir.listSync().whereType<File>()) {
           final content = file.readAsStringSync();
-          expect(content, isNot(contains(',,')), reason: 'Double comma in ${p.basename(file.path)}');
+          expect(content, isNot(contains(',,')),
+              reason: 'Double comma in ${p.basename(file.path)}');
         }
 
-        final apiDir = Directory(p.join(tempDir.path, 'test_api', 'lib', 'src', 'api'));
+        final apiDir =
+            Directory(p.join(tempDir.path, 'test_api', 'lib', 'src', 'api'));
         for (final file in apiDir.listSync().whereType<File>()) {
           final content = file.readAsStringSync();
-          expect(content, isNot(contains(',,')), reason: 'Double comma in ${p.basename(file.path)}');
+          expect(content, isNot(contains(',,')),
+              reason: 'Double comma in ${p.basename(file.path)}');
         }
       } finally {
         _cleanupDir(tempDir);
@@ -439,24 +490,28 @@ void main() {
 
         final clientDir = p.join(tempDir.path, 'petstore_compute');
         final pubGet = await Process.run(
-          'dart', ['pub', 'get'],
+          'dart',
+          ['pub', 'get'],
           workingDirectory: clientDir,
         );
         expect(pubGet.exitCode, 0,
             reason: 'dart pub get failed:\n${pubGet.stderr}');
         final analyze = await Process.run(
-          'dart', ['analyze'],
+          'dart',
+          ['analyze'],
           workingDirectory: clientDir,
         );
         expect(analyze.exitCode, 0,
-            reason: 'dart analyze failed:\n${analyze.stderr}\n${analyze.stdout}');
+            reason:
+                'dart analyze failed:\n${analyze.stderr}\n${analyze.stdout}');
       } finally {
         _cleanupDir(tempDir);
       }
     });
 
     group('Swagger 2.0', () {
-      test('normalizes Swagger 2.0 Petstore from petstore.swagger.io', () async {
+      test('normalizes Swagger 2.0 Petstore from petstore.swagger.io',
+          () async {
         final swaggerPath = p.normalize(
           p.join(p.current, 'test', 'fixtures', 'petstore_swagger.json'),
         );
@@ -508,18 +563,21 @@ void main() {
           final clientDir = p.join(tempDir.path, 'petstore_client');
 
           final pubGet = await Process.run(
-            'dart', ['pub', 'get'],
+            'dart',
+            ['pub', 'get'],
             workingDirectory: clientDir,
           );
           expect(pubGet.exitCode, 0,
               reason: 'dart pub get failed:\n${pubGet.stderr}');
 
           final analyze = await Process.run(
-            'dart', ['analyze'],
+            'dart',
+            ['analyze'],
             workingDirectory: clientDir,
           );
           expect(analyze.exitCode, 0,
-              reason: 'dart analyze failed (exit code ${analyze.exitCode}):\n${analyze.stderr}\n${analyze.stdout}');
+              reason:
+                  'dart analyze failed (exit code ${analyze.exitCode}):\n${analyze.stderr}\n${analyze.stdout}');
         } finally {
           _cleanupDir(tempDir);
         }
@@ -556,17 +614,20 @@ void main() {
 
           final clientDir = p.join(tempDir.path, 'petstore_client');
           final pubGet = await Process.run(
-            'dart', ['pub', 'get'],
+            'dart',
+            ['pub', 'get'],
             workingDirectory: clientDir,
           );
           expect(pubGet.exitCode, 0,
               reason: 'dart pub get failed:\n${pubGet.stderr}');
           final analyze = await Process.run(
-            'dart', ['analyze'],
+            'dart',
+            ['analyze'],
             workingDirectory: clientDir,
           );
           expect(analyze.exitCode, 0,
-              reason: 'dart analyze failed:\n${analyze.stderr}\n${analyze.stdout}');
+              reason:
+                  'dart analyze failed:\n${analyze.stderr}\n${analyze.stdout}');
         } finally {
           _cleanupDir(tempDir);
         }
@@ -574,7 +635,8 @@ void main() {
     });
 
     group('Train Travel API (OAS 3.1 YAML)', () {
-      test('train-travel YAML generated client compiles with dart analyze', () async {
+      test('train-travel YAML generated client compiles with dart analyze',
+          () async {
         final specPath = p.normalize(
           p.join(p.current, 'test', 'fixtures', 'train_travel.yaml'),
         );
@@ -599,18 +661,21 @@ void main() {
           final clientDir = p.join(tempDir.path, 'train_travel_client');
 
           final pubGet = await Process.run(
-            'dart', ['pub', 'get'],
+            'dart',
+            ['pub', 'get'],
             workingDirectory: clientDir,
           );
           expect(pubGet.exitCode, 0,
               reason: 'dart pub get failed:\n${pubGet.stderr}');
 
           final analyze = await Process.run(
-            'dart', ['analyze'],
+            'dart',
+            ['analyze'],
             workingDirectory: clientDir,
           );
           expect(analyze.exitCode, 0,
-              reason: 'dart analyze failed (exit code ${analyze.exitCode}):\n${analyze.stderr}\n${analyze.stdout}');
+              reason:
+                  'dart analyze failed (exit code ${analyze.exitCode}):\n${analyze.stderr}\n${analyze.stdout}');
         } finally {
           _cleanupDir(tempDir);
         }
@@ -639,17 +704,20 @@ void main() {
 
           final clientDir = p.join(tempDir.path, 'train_travel_client');
           final pubGet = await Process.run(
-            'dart', ['pub', 'get'],
+            'dart',
+            ['pub', 'get'],
             workingDirectory: clientDir,
           );
           expect(pubGet.exitCode, 0,
               reason: 'dart pub get failed:\n${pubGet.stderr}');
           final analyze = await Process.run(
-            'dart', ['analyze'],
+            'dart',
+            ['analyze'],
             workingDirectory: clientDir,
           );
           expect(analyze.exitCode, 0,
-              reason: 'dart analyze failed:\n${analyze.stderr}\n${analyze.stdout}');
+              reason:
+                  'dart analyze failed:\n${analyze.stderr}\n${analyze.stdout}');
         } finally {
           _cleanupDir(tempDir);
         }

@@ -54,7 +54,7 @@ class OpenApiSpecParser {
 
   void _parseAllSchemas() {
     _extractInlineSchemasFromRaw();
-    
+
     for (final entry in _schemasRaw.entries) {
       final name = entry.key;
       final schemaJson = entry.value;
@@ -67,7 +67,8 @@ class OpenApiSpecParser {
     for (final entry in _schemasRaw.entries) {
       final name = entry.key;
       if (!_schemas.containsKey(name)) {
-        _schemas[name] = _parseSchema(name, entry.value as Map<String, dynamic>);
+        _schemas[name] =
+            _parseSchema(name, entry.value as Map<String, dynamic>);
       }
     }
     for (final schema in _schemas.values) {
@@ -115,7 +116,8 @@ class OpenApiSpecParser {
           if (item.containsKey(r'$ref')) continue;
           if (!_isExtractable(item)) continue;
           final inlineName = '${parentName}Inline${i}';
-          if (!_schemasRaw.containsKey(inlineName) && !toAdd.containsKey(inlineName)) {
+          if (!_schemasRaw.containsKey(inlineName) &&
+              !toAdd.containsKey(inlineName)) {
             toAdd[inlineName] = Map.of(item);
             list[i] = {r'$ref': '#/components/schemas/$inlineName'};
           }
@@ -123,13 +125,15 @@ class OpenApiSpecParser {
       }
     }
     // Also extract from items of array properties
-    for (final entry in Map.of(props is Map ? props : <String, dynamic>{}).entries) {
+    for (final entry
+        in Map.of(props is Map ? props : <String, dynamic>{}).entries) {
       if (entry.value is! Map<String, dynamic>) continue;
       final prop = entry.value as Map<String, dynamic>;
       final items = prop['items'];
       if (items is Map<String, dynamic> && _isExtractable(items)) {
         final itemsName = '${parentName}${_toPascalCase(entry.key)}Item';
-        if (!_schemasRaw.containsKey(itemsName) && !toAdd.containsKey(itemsName)) {
+        if (!_schemasRaw.containsKey(itemsName) &&
+            !toAdd.containsKey(itemsName)) {
           toAdd[itemsName] = Map.of(items);
           prop['items'] = {r'$ref': '#/components/schemas/$itemsName'};
         }
@@ -137,15 +141,18 @@ class OpenApiSpecParser {
     }
   }
 
-  void _extractProperty(Map<String, dynamic> prop, Map<String, dynamic> props,
-      String propKey, String parentName, Map<String, Map<String, dynamic>> toAdd) {
+  void _extractProperty(
+      Map<String, dynamic> prop,
+      Map<String, dynamic> props,
+      String propKey,
+      String parentName,
+      Map<String, Map<String, dynamic>> toAdd) {
     final propName = _toPascalCase(propKey);
     final inlineName = '${parentName}$propName';
     final propNameExists = _schemasRaw.containsKey(propName);
-    final inlineNameExists = _schemasRaw.containsKey(inlineName) || toAdd.containsKey(inlineName);
-    if (_isExtractable(prop) &&
-        !inlineNameExists &&
-        !propNameExists) {
+    final inlineNameExists =
+        _schemasRaw.containsKey(inlineName) || toAdd.containsKey(inlineName);
+    if (_isExtractable(prop) && !inlineNameExists && !propNameExists) {
       toAdd[inlineName] = Map.of(prop);
       props[propKey] = {r'$ref': '#/components/schemas/$inlineName'};
     }
@@ -215,7 +222,9 @@ class OpenApiSpecParser {
         return result;
       }
 
-      if (type == 'object' || schemaJson.containsKey('properties') || schemaJson.containsKey('additionalProperties')) {
+      if (type == 'object' ||
+          schemaJson.containsKey('properties') ||
+          schemaJson.containsKey('additionalProperties')) {
         final result = _parseObject(name, schemaJson);
         if (!_schemas.containsKey(name)) {
           _schemas[name] = result;
@@ -257,9 +266,13 @@ class OpenApiSpecParser {
   void _registerInlineSchema(IrSchema? schema, [String? overrideName]) {
     if (schema == null) return;
     final name = overrideName ??
-        (schema is IrObjectSchema ? schema.name :
-         schema is IrEnumSchema ? schema.name :
-         schema is IrUnionSchema ? schema.name : null);
+        (schema is IrObjectSchema
+            ? schema.name
+            : schema is IrEnumSchema
+                ? schema.name
+                : schema is IrUnionSchema
+                    ? schema.name
+                    : null);
     if (name != null && !_schemas.containsKey(name)) {
       _schemas[name] = schema;
     }
@@ -284,13 +297,15 @@ class OpenApiSpecParser {
     return IrEnumSchema(
       name: _toPascalCase(name),
       values: values,
-      enumType: type == 'integer' ? IrPrimitiveType.integer : IrPrimitiveType.string,
+      enumType:
+          type == 'integer' ? IrPrimitiveType.integer : IrPrimitiveType.string,
       description: getString(schemaJson, 'description'),
       isDeprecated: getBool(schemaJson, 'deprecated') ?? false,
     );
   }
 
-  IrSchema _parseUnion(String name, Map<String, dynamic> schemaJson, {required bool isAnyOf}) {
+  IrSchema _parseUnion(String name, Map<String, dynamic> schemaJson,
+      {required bool isAnyOf}) {
     final key = isAnyOf ? 'anyOf' : 'oneOf';
     final items = getList(schemaJson, key) ?? [];
     final discriminatorMap = getMap(schemaJson, 'discriminator');
@@ -355,11 +370,13 @@ class OpenApiSpecParser {
         final ref = item[r'$ref'] as String;
         final refName = _refToName(ref);
         refs.add(IrRefSchema(refName: refName));
-      } else if (item.containsKey('properties') || item.containsKey('type') && item['type'] == 'object') {
+      } else if (item.containsKey('properties') ||
+          item.containsKey('type') && item['type'] == 'object') {
         final obj = _parseObject('${name}_inline_$i', item);
         inlineObjs.add(obj);
       } else if (item.containsKey('discriminator')) {
-        discriminatorProp = getString(getMap(item, 'discriminator') ?? {}, 'propertyName');
+        discriminatorProp =
+            getString(getMap(item, 'discriminator') ?? {}, 'propertyName');
       }
     }
 
@@ -368,14 +385,17 @@ class OpenApiSpecParser {
       final required = List<String>.from(getList(schemaJson, 'required') ?? []);
       for (final entry in props.entries) {
         if (entry.value is! Map<String, dynamic>) continue;
-        final propSchema = _parseSchema('${name}_${entry.key}', entry.value as Map<String, dynamic>);
+        final propSchema = _parseSchema(
+            '${name}_${entry.key}', entry.value as Map<String, dynamic>);
         directProps.add(IrProperty(
           name: entry.key,
           jsonKey: _toCamelCase(entry.key) != entry.key ? entry.key : null,
           schema: propSchema,
           isRequired: required.contains(entry.key),
-          isNullable: _isSchemaNullable(entry.value as Map<String, dynamic>? ?? {}),
-          description: getString(entry.value as Map<String, dynamic>, 'description'),
+          isNullable:
+              _isSchemaNullable(entry.value as Map<String, dynamic>? ?? {}),
+          description:
+              getString(entry.value as Map<String, dynamic>, 'description'),
         ));
       }
     }
@@ -472,13 +492,13 @@ class OpenApiSpecParser {
 
     final irType = switch (type) {
       'string' => switch (format) {
-        'date-time' => IrPrimitiveType.dateTime,
-        'date' => IrPrimitiveType.date,
-        'uri' || 'url' => IrPrimitiveType.uri,
-        'binary' => IrPrimitiveType.binary,
-        'byte' => IrPrimitiveType.base64,
-        _ => IrPrimitiveType.string,
-      },
+          'date-time' => IrPrimitiveType.dateTime,
+          'date' => IrPrimitiveType.date,
+          'uri' || 'url' => IrPrimitiveType.uri,
+          'binary' => IrPrimitiveType.binary,
+          'byte' => IrPrimitiveType.base64,
+          _ => IrPrimitiveType.string,
+        },
       'integer' => IrPrimitiveType.integer,
       'number' => IrPrimitiveType.number,
       'boolean' => IrPrimitiveType.boolean,
@@ -519,7 +539,15 @@ class OpenApiSpecParser {
         if (p is Map<String, dynamic>) pathParams.add(p);
       }
 
-      for (final method in ['get', 'post', 'put', 'delete', 'patch', 'options', 'head']) {
+      for (final method in [
+        'get',
+        'post',
+        'put',
+        'delete',
+        'patch',
+        'options',
+        'head'
+      ]) {
         final operation = pathItem[method];
         if (operation is! Map<String, dynamic>) continue;
 
@@ -530,7 +558,8 @@ class OpenApiSpecParser {
     return operations;
   }
 
-  IrOperation _parseOperation(String path, String method, Map<String, dynamic> op, List<Map<String, dynamic>> pathParams) {
+  IrOperation _parseOperation(String path, String method,
+      Map<String, dynamic> op, List<Map<String, dynamic>> pathParams) {
     final params = <IrParameter>[];
     final allParams = <Map<String, dynamic>>[...pathParams];
 
@@ -540,7 +569,8 @@ class OpenApiSpecParser {
     }
 
     for (final p in allParams) {
-      final pRef = p.containsKey(r'$ref') ? _resolveRef(p[r'$ref'] as String) : p;
+      final pRef =
+          p.containsKey(r'$ref') ? _resolveRef(p[r'$ref'] as String) : p;
       if (pRef == null) continue;
 
       final loc = switch (getString(pRef, 'in') ?? 'query') {
@@ -554,8 +584,13 @@ class OpenApiSpecParser {
       params.add(IrParameter(
         name: getString(pRef, 'name') ?? '',
         location: loc,
-        schema: _parseSchema(getString(pRef, 'name') ?? 'param', pRef.containsKey('schema') ? (pRef['schema'] as Map<String, dynamic>? ?? {}) : pRef),
-        isRequired: getBool(pRef, 'required') ?? (loc == IrParameterLocation.path),
+        schema: _parseSchema(
+            getString(pRef, 'name') ?? 'param',
+            pRef.containsKey('schema')
+                ? (pRef['schema'] as Map<String, dynamic>? ?? {})
+                : pRef),
+        isRequired:
+            getBool(pRef, 'required') ?? (loc == IrParameterLocation.path),
         description: getString(pRef, 'description'),
         style: _parseStyle(getString(pRef, 'style')),
         explode: getBool(pRef, 'explode') ?? true,
@@ -565,7 +600,8 @@ class OpenApiSpecParser {
     IrRequestBody? requestBody;
     final rb = op['requestBody'];
     if (rb is Map<String, dynamic>) {
-      final rbResolved = rb.containsKey(r'$ref') ? _resolveRef(rb[r'$ref'] as String) : rb;
+      final rbResolved =
+          rb.containsKey(r'$ref') ? _resolveRef(rb[r'$ref'] as String) : rb;
       if (rbResolved != null) {
         final opName = getString(op, 'operationId') ??
             '${method}_${path.replaceAll(RegExp(r'[{}]'), '').replaceAll('/', '_').replaceAll('-', '_')}';
@@ -580,7 +616,9 @@ class OpenApiSpecParser {
       final respValue = entry.value;
       if (respValue is! Map<String, dynamic>) continue;
 
-      final respResolved = respValue.containsKey(r'$ref') ? _resolveRef(respValue[r'$ref'] as String) : respValue;
+      final respResolved = respValue.containsKey(r'$ref')
+          ? _resolveRef(respValue[r'$ref'] as String)
+          : respValue;
       if (respResolved == null) continue;
 
       final contentMap = getMapOrEmpty(respResolved, 'content');
@@ -604,8 +642,10 @@ class OpenApiSpecParser {
           headers.add(IrResponseHeader(
             name: he.key,
             schema: _parseSchema('header_${he.key}', hSchema),
-            isRequired: getBool(he.value as Map<String, dynamic>, 'required') ?? false,
-            description: getString(he.value as Map<String, dynamic>, 'description'),
+            isRequired:
+                getBool(he.value as Map<String, dynamic>, 'required') ?? false,
+            description:
+                getString(he.value as Map<String, dynamic>, 'description'),
           ));
         }
       }
@@ -618,7 +658,8 @@ class OpenApiSpecParser {
       ));
     }
 
-    final operationId = getString(op, 'operationId') ?? '${method}_${path.replaceAll(RegExp(r'[{}]'), '').replaceAll('/', '_').replaceAll('-', '_')}';
+    final operationId = getString(op, 'operationId') ??
+        '${method}_${path.replaceAll(RegExp(r'[{}]'), '').replaceAll('/', '_').replaceAll('-', '_')}';
 
     final tags = (getList(op, 'tags') ?? []).map((t) => t.toString()).toList();
 
@@ -637,7 +678,8 @@ class OpenApiSpecParser {
     );
   }
 
-  IrRequestBody _parseRequestBody(Map<String, dynamic> rb, String operationName) {
+  IrRequestBody _parseRequestBody(
+      Map<String, dynamic> rb, String operationName) {
     final content = <String, IrMediaType>{};
     final contentMap = getMapOrEmpty(rb, 'content');
     for (final entry in contentMap.entries) {
@@ -645,7 +687,9 @@ class OpenApiSpecParser {
       final schemaJson = (entry.value as Map<String, dynamic>)['schema'];
       IrSchema? schema;
       if (schemaJson is Map<String, dynamic>) {
-        schema = _parseSchema('${operationName}_body_${entry.key.replaceAll('/', '_')}', schemaJson);
+        schema = _parseSchema(
+            '${operationName}_body_${entry.key.replaceAll('/', '_')}',
+            schemaJson);
       }
       content[entry.key] = IrMediaType(contentType: entry.key, schema: schema);
     }
@@ -703,7 +747,10 @@ class OpenApiSpecParser {
     return sec.whereType<Map<String, dynamic>>().map((m) {
       final result = <String, List<String>>{};
       for (final entry in m.entries) {
-        result[entry.key] = (entry.value as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
+        result[entry.key] = (entry.value as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            [];
       }
       return result;
     }).toList();
@@ -740,14 +787,16 @@ class OpenApiSpecParser {
   }
 
   static bool _isSchemaNullable(Map<String, dynamic> schemaJson) {
-    if (schemaJson.containsKey('nullable') && schemaJson['nullable'] == true) return true;
+    if (schemaJson.containsKey('nullable') && schemaJson['nullable'] == true)
+      return true;
     final typeRaw = schemaJson['type'];
     if (typeRaw is List && typeRaw.any((t) => t == 'null')) return true;
     if (schemaJson.containsKey('oneOf')) {
       final items = schemaJson['oneOf'] as List<dynamic>?;
       if (items != null) {
         for (final item in items) {
-          if (item is Map<String, dynamic> && item['type'] == 'null') return true;
+          if (item is Map<String, dynamic> && item['type'] == 'null')
+            return true;
         }
       }
     }
@@ -755,7 +804,8 @@ class OpenApiSpecParser {
       final items = schemaJson['anyOf'] as List<dynamic>?;
       if (items != null) {
         for (final item in items) {
-          if (item is Map<String, dynamic> && item['type'] == 'null') return true;
+          if (item is Map<String, dynamic> && item['type'] == 'null')
+            return true;
         }
       }
     }
@@ -791,14 +841,17 @@ class OpenApiSpecParser {
 
   static String _toEnumName(String value) {
     if (value.isEmpty) return 'empty';
-    var name = value.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_').replaceAll(RegExp(r'_+'), '_');
+    var name = value
+        .replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')
+        .replaceAll(RegExp(r'_+'), '_');
     if (RegExp(r'^[0-9]').hasMatch(name)) name = 'value_$name';
     if (name.startsWith('_')) name = name.substring(1);
     if (name.endsWith('_')) name = name.substring(0, name.length - 1);
     return name;
   }
 
-  static Map<String, dynamic> getMapOrEmpty(Map<String, dynamic> map, String key) {
+  static Map<String, dynamic> getMapOrEmpty(
+      Map<String, dynamic> map, String key) {
     final value = map[key];
     if (value is Map<String, dynamic>) return value;
     if (value is Map) return Map<String, dynamic>.from(value);

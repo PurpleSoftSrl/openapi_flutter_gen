@@ -25,18 +25,21 @@ class SwaggerNormalizer {
   static bool _isSwagger2(Map<String, dynamic> doc) =>
       doc.containsKey('swagger') && doc['swagger'] is String;
 
-  static void _normalizeInfo(Map<String, dynamic> src, Map<String, dynamic> dst) {
+  static void _normalizeInfo(
+      Map<String, dynamic> src, Map<String, dynamic> dst) {
     final info = src['info'];
     if (info is Map<String, dynamic>) {
       dst['info'] = Map<String, dynamic>.from(info);
     }
   }
 
-  static void _normalizeServers(Map<String, dynamic> src, Map<String, dynamic> dst) {
+  static void _normalizeServers(
+      Map<String, dynamic> src, Map<String, dynamic> dst) {
     final host = src['host'] as String? ?? 'localhost';
     final basePath = src['basePath'] as String? ?? '/';
-    final schemes = (src['schemes'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
-        ['https'];
+    final schemes =
+        (src['schemes'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
+            ['https'];
 
     final servers = <Map<String, dynamic>>[];
     for (final scheme in schemes) {
@@ -45,14 +48,16 @@ class SwaggerNormalizer {
     dst['servers'] = servers;
   }
 
-  static void _normalizeSchemas(Map<String, dynamic> src, Map<String, dynamic> dst) {
+  static void _normalizeSchemas(
+      Map<String, dynamic> src, Map<String, dynamic> dst) {
     final definitions = src['definitions'];
     if (definitions is Map<String, dynamic>) {
       dst['components'] = {'schemas': _convertDefinitions(definitions)};
     }
   }
 
-  static Map<String, dynamic> _convertDefinitions(Map<String, dynamic> definitions) {
+  static Map<String, dynamic> _convertDefinitions(
+      Map<String, dynamic> definitions) {
     final result = <String, dynamic>{};
     for (final entry in definitions.entries) {
       if (entry.value is Map<String, dynamic>) {
@@ -65,7 +70,8 @@ class SwaggerNormalizer {
   }
 
   /// Extracts inline enum and object property schemas as separate named schemas.
-  static void _extractInlineSchemas(Map<String, dynamic> target, String parentName, Map<String, dynamic> schema) {
+  static void _extractInlineSchemas(Map<String, dynamic> target,
+      String parentName, Map<String, dynamic> schema) {
     final rawProps = schema['properties'];
     if (rawProps is! Map<String, dynamic>) return;
     final props = rawProps;
@@ -75,7 +81,8 @@ class SwaggerNormalizer {
         final propName = _toPascalCase(entry.key);
         final inlineName = '${parentName}$propName';
         final shouldExtract = prop.containsKey('enum') ||
-            ((prop['type'] == 'object' || prop.containsKey('properties')) && !prop.containsKey(r'$ref'));
+            ((prop['type'] == 'object' || prop.containsKey('properties')) &&
+                !prop.containsKey(r'$ref'));
         if (shouldExtract && !target.containsKey(inlineName)) {
           target[inlineName] = _convertPropertySchema(prop);
           props[entry.key] = {'\$ref': '#/components/schemas/$inlineName'};
@@ -86,17 +93,21 @@ class SwaggerNormalizer {
 
   static String _toPascalCase(String s) {
     if (s.isEmpty) return s;
-    return s.split(RegExp(r'[\._\-\s]+')).map((p) =>
-      p.isEmpty ? '' : p[0].toUpperCase() + p.substring(1)).join();
+    return s
+        .split(RegExp(r'[\._\-\s]+'))
+        .map((p) => p.isEmpty ? '' : p[0].toUpperCase() + p.substring(1))
+        .join();
   }
 
-  static Map<String, dynamic> _convertPropertySchema(Map<String, dynamic> schema) {
+  static Map<String, dynamic> _convertPropertySchema(
+      Map<String, dynamic> schema) {
     final result = <String, dynamic>{};
 
     result['type'] = schema['type'] ?? 'object';
 
     if (schema.containsKey(r'$ref')) {
-      result[r'$ref'] = (schema[r'$ref'] as String).replaceFirst('#/definitions/', '#/components/schemas/');
+      result[r'$ref'] = (schema[r'$ref'] as String)
+          .replaceFirst('#/definitions/', '#/components/schemas/');
       return result;
     }
 
@@ -106,7 +117,8 @@ class SwaggerNormalizer {
         final converted = <String, dynamic>{};
         for (final entry in props.entries) {
           if (entry.value is Map<String, dynamic>) {
-            converted[entry.key] = _convertPropertySchema(entry.value as Map<String, dynamic>);
+            converted[entry.key] =
+                _convertPropertySchema(entry.value as Map<String, dynamic>);
           }
         }
         result['properties'] = converted;
@@ -122,16 +134,28 @@ class SwaggerNormalizer {
 
     if (schema.containsKey('required')) result['required'] = schema['required'];
 
-    for (final key in ['description', 'format', 'enum', 'default', 'nullable',
-         'minimum', 'maximum', 'minLength', 'maxLength', 'pattern',
-         'additionalProperties', 'discriminator']) {
+    for (final key in [
+      'description',
+      'format',
+      'enum',
+      'default',
+      'nullable',
+      'minimum',
+      'maximum',
+      'minLength',
+      'maxLength',
+      'pattern',
+      'additionalProperties',
+      'discriminator'
+    ]) {
       if (schema.containsKey(key)) result[key] = schema[key];
     }
 
     return result;
   }
 
-  static void _normalizePaths(Map<String, dynamic> src, Map<String, dynamic> dst) {
+  static void _normalizePaths(
+      Map<String, dynamic> src, Map<String, dynamic> dst) {
     final paths = src['paths'];
     if (paths is! Map<String, dynamic>) return;
 
@@ -147,10 +171,19 @@ class SwaggerNormalizer {
     final result = <String, dynamic>{};
 
     final pathParams = (pathItem['parameters'] as List<dynamic>?)
-        ?.whereType<Map<String, dynamic>>()
-        .toList() ?? [];
+            ?.whereType<Map<String, dynamic>>()
+            .toList() ??
+        [];
 
-    for (final method in ['get', 'post', 'put', 'delete', 'patch', 'options', 'head']) {
+    for (final method in [
+      'get',
+      'post',
+      'put',
+      'delete',
+      'patch',
+      'options',
+      'head'
+    ]) {
       final operation = pathItem[method];
       if (operation is! Map<String, dynamic>) continue;
       result[method] = _convertOperation(operation, pathParams);
@@ -165,8 +198,9 @@ class SwaggerNormalizer {
 
     final allParams = <Map<String, dynamic>>[...pathParams];
     final opParams = (operation['parameters'] as List<dynamic>?)
-        ?.whereType<Map<String, dynamic>>()
-        .toList() ?? [];
+            ?.whereType<Map<String, dynamic>>()
+            .toList() ??
+        [];
 
     final convertedParams = <Map<String, dynamic>>[];
     Map<String, dynamic>? requestBody;
@@ -222,7 +256,8 @@ class SwaggerNormalizer {
     final converted = <String, dynamic>{};
     for (final entry in responses.entries) {
       if (entry.value is Map<String, dynamic>) {
-        final resp = Map<String, dynamic>.from(entry.value as Map<String, dynamic>);
+        final resp =
+            Map<String, dynamic>.from(entry.value as Map<String, dynamic>);
         final schema = resp['schema'];
         if (schema is Map<String, dynamic>) {
           resp['content'] = {
@@ -238,13 +273,15 @@ class SwaggerNormalizer {
     result['responses'] = converted;
   }
 
-  static void _normalizeSecurity(Map<String, dynamic> src, Map<String, dynamic> dst) {
+  static void _normalizeSecurity(
+      Map<String, dynamic> src, Map<String, dynamic> dst) {
     final defs = src['securityDefinitions'];
     if (defs is Map<String, dynamic>) {
       final result = <String, dynamic>{};
       for (final entry in defs.entries) {
         if (entry.value is Map<String, dynamic>) {
-          final s = Map<String, dynamic>.from(entry.value as Map<String, dynamic>);
+          final s =
+              Map<String, dynamic>.from(entry.value as Map<String, dynamic>);
           result[entry.key] = s;
         }
       }

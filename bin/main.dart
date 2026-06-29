@@ -5,12 +5,24 @@ import 'package:openapi_flutter_gen/src/cli/runner.dart';
 
 void main(List<String> arguments) async {
   final parser = ArgParser()
-    ..addOption('spec', abbr: 's', help: 'Path to the OpenAPI spec file (JSON or YAML)', mandatory: false)
+    ..addOption('spec',
+        abbr: 's',
+        help: 'Path to the OpenAPI spec file (JSON or YAML)',
+        mandatory: false)
     ..addOption('spec-url', abbr: 'u', help: 'URL to the OpenAPI spec file')
-    ..addOption('output', abbr: 'o', help: 'Output directory for generated code', defaultsTo: './generated')
-    ..addOption('package-name', abbr: 'p', help: 'Dart package name for generated code', defaultsTo: 'api_client')
-    ..addFlag('no-isolates', help: 'Disable isolate-based parallel generation', defaultsTo: false)
-    ..addFlag('use-compute', help: 'Generate Isolate.run wrappers for heavy JSON deserialization', defaultsTo: false)
+    ..addOption('output',
+        abbr: 'o',
+        help: 'Output directory for generated code',
+        defaultsTo: './generated')
+    ..addOption('package-name',
+        abbr: 'p',
+        help: 'Dart package name for generated code',
+        defaultsTo: 'api_client')
+    ..addFlag('no-isolates',
+        help: 'Disable isolate-based parallel generation', defaultsTo: false)
+    ..addFlag('use-compute',
+        help: 'Generate Isolate.run wrappers for heavy JSON deserialization',
+        defaultsTo: false)
     ..addFlag('help', abbr: 'h', help: 'Show usage', negatable: false);
 
   try {
@@ -44,7 +56,6 @@ void main(List<String> arguments) async {
       useIsolates: !(results['no-isolates'] as bool),
       useCompute: results['use-compute'] as bool,
     );
-
   } on ArgParserException catch (e) {
     stderr.writeln('Error: ${e.message}');
     print('');

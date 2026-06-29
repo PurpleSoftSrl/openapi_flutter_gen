@@ -23,7 +23,8 @@ class Runner {
     final parser = OpenApiSpecParser(normalized);
     final apiDoc = parser.parse();
 
-    print('Parsed: ${apiDoc.schemas.length} schemas, ${apiDoc.operations.length} operations');
+    print(
+        'Parsed: ${apiDoc.schemas.length} schemas, ${apiDoc.operations.length} operations');
     print('Tags: ${apiDoc.operationsByTag.keys.join(', ')}');
 
     print('Generating Dart code...');
