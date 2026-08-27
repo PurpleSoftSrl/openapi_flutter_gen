@@ -724,4 +724,97 @@ void main() {
       });
     });
   });
+
+  group('Bearer non-empty guard + multipart enum wire value', () {
+    late IrApiDocument bmeDoc;
+
+    setUpAll(() async {
+      final fixturePath = p.normalize(
+        p.join(p.current, 'test', 'fixtures', 'bearer_multipart_enum.json'),
+      );
+      final fixtureJson = json.decode(await File(fixturePath).readAsString())
+          as Map<String, dynamic>;
+      bmeDoc = OpenApiSpecParser(fixtureJson).parse();
+    });
+
+    // TEST #1: auth interceptors must stamp the Authorization header ONLY when
+    // the token is non-null AND non-empty. A bare `!= null` would send a broken
+    // empty `Bearer ` on every anonymous request. Emitted by
+    // support_generator.dart into core/auth.dart (interceptor) and, when an
+    // AuthInterceptor is emitted, core/interceptors.dart.
+    test('emitted auth guards token with isNotEmpty', () async {
+      final tempDir = Directory.systemTemp.createTempSync('oafg_bearer_');
+      try {
+        final generator = CodeGenerator(
+          doc: bmeDoc,
+          outputDir: tempDir.path,
+          packageName: 'bme_client',
+          useIsolates: false,
+          useCompute: false,
+        );
+        await generator.generate();
+
+        final coreDir =
+            Directory(p.join(tempDir.path, 'bme_client', 'lib', 'src', 'core'));
+        final authFile = File(p.join(coreDir.path, 'auth.dart'));
+        expect(authFile.existsSync(), isTrue,
+            reason: 'core/auth.dart should be emitted');
+        final authContent = authFile.readAsStringSync();
+        expect(authContent, contains('token.isNotEmpty'),
+            reason:
+                'auth interceptor must guard the token with isNotEmpty, not a bare != null');
+
+        // If an AuthInterceptor is emitted in core/interceptors.dart, it must
+        // apply the same non-empty guard.
+        final interceptorsFile = File(p.join(coreDir.path, 'interceptors.dart'));
+        if (interceptorsFile.existsSync()) {
+          final interceptorsContent = interceptorsFile.readAsStringSync();
+          if (interceptorsContent.contains('AuthInterceptor')) {
+            expect(interceptorsContent, contains('.isNotEmpty'),
+                reason:
+                    'AuthInterceptor must guard the token with isNotEmpty');
+          }
+        }
+      } finally {
+        _cleanupDir(tempDir);
+      }
+    });
+
+    // TEST #2: enum fields in a multipart toFormData() must serialize to their
+    // WIRE value via `.toJson().toString()` (NOT a bare `.toString()`, which
+    // emits `EnumType.name` a server cannot bind). Additionally, a binary
+    // multipart part must be `MultipartFile.fromBytes(bytes, filename: '<key>')`
+    // with NO caller-settable FileName/ContentType sibling fields (locks the
+    // reverted experiment). Emitted by model_generator.dart _generateToFormData.
+    test('multipart enum serializes via toJson wire value, binary has no '
+        'FileName/ContentType siblings', () {
+      final uploadSchema = bmeDoc.schemas['UploadRequest'] as IrObjectSchema;
+      final generated =
+          ModelGenerator.generate(uploadSchema, packageName: 'bme_client');
+      final content = generated.content;
+
+      // toFormData must be emitted (binary property triggers it).
+      expect(content, contains('FormData toFormData()'),
+          reason: 'binary property should trigger toFormData emission');
+
+      // Enum field serialized via toJson().toString() wire value.
+      expect(content, contains('kind.toJson().toString()'),
+          reason:
+              'enum multipart field must serialize its wire value via toJson()');
+      // And NOT via a bare enum .toString() (which would emit EnumType.name).
+      expect(content, isNot(contains('kind.toString()')),
+          reason: 'enum field must not be serialized with a bare toString()');
+
+      // Binary part is fromBytes with filename set to the json key, and has no
+      // caller-settable filename/content-type sibling fields.
+      expect(content, contains("MultipartFile.fromBytes("),
+          reason: 'binary part must use MultipartFile.fromBytes');
+      expect(content, contains("filename: 'file'"),
+          reason: 'binary part filename must be the json key');
+      expect(content, isNot(contains('FileName')),
+          reason: 'no caller-settable FileName sibling field on binary part');
+      expect(content, isNot(contains('ContentType')),
+          reason: 'no caller-settable ContentType sibling field on binary part');
+    });
+  });
 }

@@ -1,3 +1,8 @@
+## 0.2.11
+
+- Fix: auth interceptors stamp the Authorization header only for a non-empty token (previously a bare `Bearer ` was sent for an empty token).
+- Fix: enum fields in multipart form data serialize to their wire value (`.toJson()`) instead of `EnumType.name`.
+
 ## 0.2.10
 
 - Rewrite README comparison table: replaced non-OpenAPI tools (retrofit, chopper, ferry) with real pub.dev competitors (swagger_dart_code_generator, swagger_parser, openapi_generator, space_gen, openapi_spec), verified by source code analysis
