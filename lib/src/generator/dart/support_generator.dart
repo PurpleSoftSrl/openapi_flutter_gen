@@ -132,7 +132,7 @@ class ApiErrorInterceptor extends Interceptor {
               '  void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {');
           buf.writeln('    var token = security.token;');
           buf.writeln('    token ??= await security.tokenProvider?.call();');
-          buf.writeln('    if (token != null) {');
+          buf.writeln('    if (token != null && token.isNotEmpty) {');
           buf.writeln(
               '      options.headers[security.headerName] = \'\${security.tokenPrefix}\$token\';');
           buf.writeln('    }');
@@ -207,7 +207,7 @@ class ApiErrorInterceptor extends Interceptor {
           buf.writeln('    var token = security.accessToken;');
           buf.writeln(
               '    token ??= await security.tokenProvider?.call(security.scopes);');
-          buf.writeln('    if (token != null) {');
+          buf.writeln('    if (token != null && token.isNotEmpty) {');
           buf.writeln(
               '      options.headers[\'Authorization\'] = \'Bearer \$token\';');
           buf.writeln('    }');
@@ -343,7 +343,7 @@ class AuthInterceptor extends Interceptor {
 
   void _addAuth(RequestOptions options) {
     final t = token;
-    if (t != null) {
+    if (t != null && t.isNotEmpty) {
       options.headers[headerName] = '\$tokenPrefix\$t';
     }
   }

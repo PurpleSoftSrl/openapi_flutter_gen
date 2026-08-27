@@ -115,6 +115,13 @@ class ModelGenerator {
         } else {
           buf.writeln('this.${sanitizeFieldName(prop.name)}$defStr,');
         }
+        // Transport-only optional filename/content-type for multipart binary
+        // parts; excluded from JSON serialization.
+        if (_isBinary(prop.schema)) {
+          final fieldName = sanitizeFieldName(prop.name);
+          buf.writeln('    this.${fieldName}FileName,');
+          buf.writeln('    this.${fieldName}ContentType,');
+        }
       }
 
       buf.writeln('  });');
@@ -125,6 +132,14 @@ class ModelGenerator {
       final typeStr = _propertyDartType(prop);
       final fieldName = sanitizeFieldName(prop.name);
       buf.writeln('  final $typeStr $fieldName;');
+      if (_isBinary(prop.schema)) {
+        buf.writeln(
+            '  /// Optional multipart filename for the `$fieldName` part.');
+        buf.writeln('  final String? ${fieldName}FileName;');
+        buf.writeln(
+            '  /// Optional multipart content-type for the `$fieldName` part.');
+        buf.writeln('  final String? ${fieldName}ContentType;');
+      }
     }
     buf.writeln();
     _generateFromJson(buf, allProps, className, schema);
@@ -160,15 +175,34 @@ class ModelGenerator {
         if (isRequiredAndNonNullable) {
           buf.writeln(
               '    fd.files.add(MapEntry(\'$jsonKey\', MultipartFile.fromBytes(');
-          buf.writeln('      $fieldName, filename: \'$jsonKey\',');
+          buf.writeln('      $fieldName,');
+          buf.writeln(
+              '      filename: ${fieldName}FileName ?? \'$jsonKey\',');
+          buf.writeln(
+              '      contentType: ${fieldName}ContentType != null ? DioMediaType.parse(${fieldName}ContentType!) : null,');
           buf.writeln('    )));');
         } else {
           buf.writeln('    if ($fieldName != null) {');
-          buf.writeln('      final bytesCopy = $fieldName;');
           buf.writeln(
               '      fd.files.add(MapEntry(\'$jsonKey\', MultipartFile.fromBytes(');
-          buf.writeln('        bytesCopy!, filename: \'$jsonKey\',');
+          buf.writeln('        $fieldName!,');
+          buf.writeln(
+              '        filename: ${fieldName}FileName ?? \'$jsonKey\',');
+          buf.writeln(
+              '        contentType: ${fieldName}ContentType != null ? DioMediaType.parse(${fieldName}ContentType!) : null,');
           buf.writeln('      )));');
+          buf.writeln('    }');
+        }
+      } else if (schema is IrEnumSchema) {
+        // Enums must serialize to their wire value (mirror toJson), not
+        // `.toString()` which would emit `EnumType.name`.
+        if (isRequiredAndNonNullable) {
+          buf.writeln(
+              '    fd.fields.add(MapEntry(\'$jsonKey\', $fieldName.toJson().toString()));');
+        } else {
+          buf.writeln('    if ($fieldName != null) {');
+          buf.writeln(
+              '      fd.fields.add(MapEntry(\'$jsonKey\', $fieldName!.toJson().toString()));');
           buf.writeln('    }');
         }
       } else if (isRequiredAndNonNullable) {
@@ -256,26 +290,25 @@ class ModelGenerator {
       var rawType = schemaToDartType(prop.schema);
       if (rawType.endsWith('?'))
         rawType = rawType.substring(0, rawType.length - 1);
-      buf.writeln('    $rawType? ${sanitizeFieldName(prop.name)},');
+      final fieldName = sanitizeFieldName(prop.name);
+      buf.writeln('    $rawType? $fieldName,');
+      if (_isBinary(prop.schema)) {
+        buf.writeln('    String? ${fieldName}FileName,');
+        buf.writeln('    String? ${fieldName}ContentType,');
+      }
     }
 
     buf.writeln('  }) {');
-    if (allProps.isNotEmpty) {
-      buf.write('    if (');
-      buf.write(allProps
-          .map((p) => '${sanitizeFieldName(p.name)} == null')
-          .join(' && '));
-      buf.writeln(') { return this; }');
-      buf.writeln();
-    }
     buf.writeln('    return ${allProps.isEmpty ? "const " : ""}$className(');
 
     for (final prop in allProps) {
       final fieldName = sanitizeFieldName(prop.name);
-      if (allProps.length == 1) {
-        buf.writeln('      ${fieldName}: ${fieldName},');
-      } else {
-        buf.writeln('      ${fieldName}: ${fieldName} ?? this.${fieldName},');
+      buf.writeln('      ${fieldName}: ${fieldName} ?? this.${fieldName},');
+      if (_isBinary(prop.schema)) {
+        buf.writeln(
+            '      ${fieldName}FileName: ${fieldName}FileName ?? this.${fieldName}FileName,');
+        buf.writeln(
+            '      ${fieldName}ContentType: ${fieldName}ContentType ?? this.${fieldName}ContentType,');
       }
     }
 
@@ -672,6 +705,9 @@ class ModelGenerator {
     if (disc.startsWith(parentName)) return '${disc}Variant$index';
     return '${parentName}${disc}Variant$index';
   }
+
+  static bool _isBinary(IrSchema schema) =>
+      schema is IrPrimitiveSchema && schema.type == IrPrimitiveType.binary;
 
   static String _propertyDartType(IrProperty prop) {
     final baseType = schemaToDartType(prop.schema);
