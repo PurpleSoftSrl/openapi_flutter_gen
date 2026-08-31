@@ -751,6 +751,16 @@ class ModelGenerator {
                   : 'String';
           return 'List<$enumName>.generate(($expr as List).length, (i) => $enumName.fromJson(($expr as List<dynamic>)[i] as $enumType), growable: false)';
         }
+        final items = schema.items;
+        if (items is IrPrimitiveSchema &&
+            (items.type == IrPrimitiveType.dateTime ||
+                items.type == IrPrimitiveType.date ||
+                items.type == IrPrimitiveType.uri)) {
+          // date-time/date/uri elements arrive as JSON strings; a bare .cast<DateTime>()
+          // (or .cast<Uri>()) over decoded Strings throws at runtime. Parse each element
+          // through the item's own fromJson so a List<DateTime> round-trips correctly.
+          return '($expr as List).map((e) => ${_fromJsonExpr('e', items)}).toList()';
+        }
         final inner = schemaToDartType(schema.items);
         // A decoded JSON array is a List<dynamic> at runtime; a direct `as List<T>`
         // cast throws even when every element is a T. Use .cast<T>() to re-wrap it.
@@ -776,22 +786,25 @@ class ModelGenerator {
       case IrUnionSchema():
         return '$expr.toJson()';
       case IrListSchema():
-        if (schema.items is IrObjectSchema || schema.items is IrRefSchema) {
-          return '$expr.map((e) => e.toJson()).toList()';
-        }
-        if (schema.items is IrEnumSchema) {
-          return '$expr.map((e) => e.toJson()).toList()';
-        }
-        return expr;
+        // A JSON-native item (string/int/bool/number) round-trips as itself, so the
+        // list serializes as-is. Any item with a non-identity encoding (object, enum,
+        // date-time, date, uri, nested list/map) MUST be mapped element-by-element —
+        // e.g. a raw List<DateTime> is not JSON-encodable and jsonEncode throws at
+        // send time. Reusing _toJsonExpr on the item keeps every type in one place.
+        final itemToJson = _toJsonExpr('e', schema.items);
+        return itemToJson == 'e' ? expr : '$expr.map((e) => $itemToJson).toList()';
       case IrMapSchema():
         if (schema.values is IrObjectSchema || schema.values is IrRefSchema) {
           return '$expr.map((k, v) => MapEntry(k, v.toJson()))';
         }
         return expr;
-      case IrPrimitiveSchema(
-          type: IrPrimitiveType.dateTime || IrPrimitiveType.date
-        ):
+      case IrPrimitiveSchema(type: IrPrimitiveType.dateTime):
         return '$expr.toIso8601String()';
+      case IrPrimitiveSchema(type: IrPrimitiveType.date):
+        // OpenAPI `format: date` is a calendar date with NO time-of-day: emit yyyy-MM-dd,
+        // never a full ISO datetime. A server binding a date-only type (e.g. .NET DateOnly)
+        // rejects "2026-02-19T00:00:00.000" with a 400. split('T') keeps just the date part.
+        return "$expr.toIso8601String().split('T').first";
       case IrPrimitiveSchema(type: IrPrimitiveType.uri):
         return '$expr.toString()';
       case IrPrimitiveSchema():
@@ -803,8 +816,11 @@ class ModelGenerator {
     if (schema is IrPrimitiveSchema) {
       switch (schema.type) {
         case IrPrimitiveType.dateTime:
-        case IrPrimitiveType.date:
           return '$expr?.toIso8601String()';
+        case IrPrimitiveType.date:
+          // `format: date` → yyyy-MM-dd only (see _toJsonExpr); a full ISO datetime
+          // breaks a server binding a date-only type. `?.` short-circuits the chain.
+          return "$expr?.toIso8601String().split('T').first";
         case IrPrimitiveType.uri:
           return '$expr?.toString()';
         default:

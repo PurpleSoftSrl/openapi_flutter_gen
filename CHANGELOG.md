@@ -1,3 +1,8 @@
+## 0.2.12
+
+- Fix: `format: date` fields now serialize to date-only `yyyy-MM-dd` (previously a full ISO datetime `…T00:00:00.000`), which a server binding a date-only type (e.g. .NET `DateOnly`) rejected with a 400.
+- Fix: arrays of `date` / `date-time` now serialize element-by-element in `toJson` (a raw `List<DateTime>` is not JSON-encodable → `jsonEncode` threw at send time) and deserialize element-by-element in `fromJson` (a bare `.cast<DateTime>()` over decoded strings threw at runtime).
+
 ## 0.2.11
 
 - Fix: auth interceptors stamp the Authorization header only for a non-empty token (previously a bare `Bearer ` was sent for an empty token).

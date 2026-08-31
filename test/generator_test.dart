@@ -205,6 +205,56 @@ void main() {
       expect(generated.content, isNot(contains('as List<String>')));
     });
 
+    test('date vs date-time + date/date-time arrays serialize correctly', () {
+      // Regression: OpenAPI `format: date` is a calendar date (yyyy-MM-dd) — a full ISO
+      // datetime breaks a server binding a date-only type (.NET DateOnly → 400). And a
+      // List<DateTime> must be mapped element-by-element (a raw list is not JSON-encodable;
+      // a bare .cast<DateTime>() over decoded Strings throws on the way back).
+      final spec = <String, dynamic>{
+        'openapi': '3.0.0',
+        'info': <String, dynamic>{'title': 'T', 'version': '1'},
+        'paths': <String, dynamic>{},
+        'components': <String, dynamic>{
+          'schemas': <String, dynamic>{
+            'DatesReq': <String, dynamic>{
+              'type': 'object',
+              'properties': <String, dynamic>{
+                'sourceDate': <String, dynamic>{'type': 'string', 'format': 'date'},
+                'targetDates': <String, dynamic>{
+                  'type': 'array',
+                  'items': <String, dynamic>{'type': 'string', 'format': 'date'},
+                },
+                'createdAt': <String, dynamic>{'type': 'string', 'format': 'date-time'},
+                'stamps': <String, dynamic>{
+                  'type': 'array',
+                  'items': <String, dynamic>{'type': 'string', 'format': 'date-time'},
+                },
+              },
+            },
+          },
+        },
+      };
+      final doc = OpenApiSpecParser(spec).parse();
+      final generated =
+          ModelGenerator.generate(doc.schemas['DatesReq']!, packageName: 'test_api');
+      final c = generated.content;
+
+      // date scalar → yyyy-MM-dd (never a full ISO datetime).
+      expect(c, contains("sourceDate!.toIso8601String().split('T').first"));
+      // date-time scalar → full ISO, NOT truncated.
+      expect(c, contains('createdAt!.toIso8601String()'));
+      expect(c, isNot(contains("createdAt!.toIso8601String().split")));
+      // date array → per-element date-only (a raw List<DateTime> is not JSON-encodable).
+      expect(c, contains(".map((e) => e.toIso8601String().split('T').first)"));
+      // date-time array → per-element full ISO.
+      expect(c, contains('.map((e) => e.toIso8601String())'));
+      // NEVER emit a bare List<DateTime> or a .cast<DateTime>() (both crash at runtime).
+      expect(c, isNot(contains("'targetDates': targetDates!,")));
+      expect(c, isNot(contains('.cast<DateTime>()')));
+      // fromJson: date/date-time arrays parse each element.
+      expect(c, contains('DateTime.parse(e as String)'));
+    });
+
     test('generates PetStatus enum correctly', () {
       final generated =
           ModelGenerator.generate(petStatusSchema, packageName: 'test_api');
