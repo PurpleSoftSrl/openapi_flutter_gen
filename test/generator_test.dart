@@ -6,6 +6,7 @@ import 'package:openapi_flutter_gen/src/parser/openapi_parser.dart';
 import 'package:openapi_flutter_gen/src/parser/swagger_normalizer.dart';
 import 'package:openapi_flutter_gen/src/ir/ir.dart';
 import 'package:openapi_flutter_gen/src/generator/generator.dart';
+import 'package:openapi_flutter_gen/src/generator/runtime_generator.dart';
 import 'package:openapi_flutter_gen/src/generator/dart/model_generator.dart';
 import 'package:openapi_flutter_gen/src/generator/dart/api_generator.dart';
 import 'package:path/path.dart' as p;
@@ -865,6 +866,240 @@ void main() {
           reason: 'no caller-settable FileName sibling field on binary part');
       expect(content, isNot(contains('ContentType')),
           reason: 'no caller-settable ContentType sibling field on binary part');
+    });
+  });
+
+  group('PureSurface (Kiota-lite) mode', () {
+    // A pure-surface method builds a RequestInformation + calls adapter.send*
+    // and returns the model (no dio, no *Result, no Options/CancelToken).
+    test('pure api method builds RequestInformation and returns the model', () {
+      final files = ApiGenerator.generateServices(
+        {'pets': apiDoc.operationsByTag['pets']!},
+        packageName: 'test_api',
+        servers: apiDoc.servers,
+        pureSurface: true,
+        corePackage: 'purple_openapi_core',
+      );
+      final petsApiFile =
+          files.firstWhere((f) => f.path.contains('pets_api.dart'));
+      final c = petsApiFile.content;
+
+      // Class ctor takes a RequestAdapter + baseUrl (no dio).
+      expect(c,
+          contains('const PetsApi({required this.adapter, this.baseUrl});'));
+      expect(c, contains('final RequestAdapter adapter;'));
+
+      // Single core import; NO dio import; NO *_result imports.
+      expect(
+          c, contains("import 'package:purple_openapi_core/purple_openapi_core.dart';"));
+      expect(c, isNot(contains("import 'package:dio/dio.dart';")),
+          reason: 'pure api file must not import dio');
+      expect(c, isNot(contains('_result.dart')),
+          reason: 'pure api file must not import *_result files');
+
+      // getPet: returns the model directly, builds RequestInformation with the
+      // RAW url template, sets the path param, and calls adapter.send(fromJson).
+      expect(c, contains('Future<Pet> getPet({'));
+      expect(c, isNot(contains('GetPetResult')),
+          reason: 'pure method must not reference a *Result type');
+      expect(c, contains('final requestInfo = RequestInformation('));
+      expect(c, contains('httpMethod: HttpMethod.get,'));
+      expect(c, contains("urlTemplate: '/pets/{petId}',"),
+          reason: 'urlTemplate keeps {petId} verbatim (Kiota contract)');
+      expect(c, contains("requestInfo.pathParameters['petId'] = petId.toString();"));
+      expect(c, contains('return adapter.send(requestInfo, Pet.fromJson);'));
+
+      // No dio-transport params leak into the signature.
+      expect(c, isNot(contains('CancelToken')),
+          reason: 'pure methods drop CancelToken');
+      expect(c, isNot(contains('Options? options')),
+          reason: 'pure methods drop the Options param');
+      expect(c, isNot(contains('dio.request')),
+          reason: 'pure methods must not call dio');
+      // But `extra` is still forwarded into the options bag.
+      expect(c, contains('Map<String, dynamic>? extra,'));
+      expect(c, contains('requestInfo.options.addAll(extra);'));
+    });
+
+    test('pure list success uses sendList; body uses setJsonContent; '
+        'no-content uses sendNoContent', () {
+      final files = ApiGenerator.generateServices(
+        {'pets': apiDoc.operationsByTag['pets']!},
+        packageName: 'test_api',
+        servers: apiDoc.servers,
+        pureSurface: true,
+      );
+      final c = files
+          .firstWhere((f) => f.path.contains('pets_api.dart'))
+          .content;
+
+      // listPets → 200 is an array → Future<List<Pet>> + adapter.sendList.
+      expect(c, contains('Future<List<Pet>> listPets({'));
+      expect(c, contains('return adapter.sendList(requestInfo, Pet.fromJson);'));
+
+      // createPet → JSON body serialized via setJsonContent(model.toJson()).
+      // The body is REQUIRED, so no null-aware `?.` (matches legacy isRequired).
+      expect(c, contains('Future<Pet> createPet({'));
+      expect(c,
+          contains('requestInfo.setJsonContent(createPetRequest.toJson());'));
+
+      // deletePet → 204 no-content → Future<void> + adapter.sendNoContent.
+      expect(c, contains('Future<void> deletePet({'));
+      expect(c, contains('return adapter.sendNoContent(requestInfo);'));
+    });
+
+    test('pure generateServices emits NO *_result.dart files', () {
+      final files = ApiGenerator.generateServices(
+        apiDoc.operationsByTag,
+        packageName: 'test_api',
+        servers: apiDoc.servers,
+        pureSurface: true,
+      );
+      expect(files.any((f) => f.path.contains('_result.dart')), isFalse,
+          reason: 'D-R1 Option A: no *_result.dart files in pure mode');
+      // But one *_api.dart per tag is still emitted.
+      expect(files.any((f) => f.path.contains('pets_api.dart')), isTrue);
+    });
+
+    test('pure root ApiClient injects a RequestAdapter (no dio/auth plumbing)',
+        () {
+      final clientFile = ApiGenerator.generateRootClient(
+        {'pets': apiDoc.operationsByTag['pets']!},
+        packageName: 'test_api',
+        servers: apiDoc.servers,
+        securitySchemes: apiDoc.securitySchemes,
+        pureSurface: true,
+        corePackage: 'purple_openapi_core',
+      );
+      final c = clientFile.content;
+      expect(c, contains('class ApiClient {'));
+      expect(c,
+          contains("import 'package:purple_openapi_core/purple_openapi_core.dart';"));
+      expect(c, contains('ApiClient({required this.adapter, this.baseUrl'));
+      expect(c, contains('final RequestAdapter adapter;'));
+      expect(
+          c, contains('PetsApi get pets => PetsApi(adapter: adapter, baseUrl: baseUrl);'));
+      // No dio / auth / error-handler / interceptor plumbing in the pure client.
+      expect(c, isNot(contains("import 'package:dio/dio.dart';")));
+      expect(c, isNot(contains('../core/auth.dart')));
+      expect(c, isNot(contains('../core/error_handler.dart')));
+      expect(c, isNot(contains('Dio')));
+      expect(c, isNot(contains('errorHandler')));
+      expect(c, isNot(contains('BearerAuthSecurity')));
+    });
+
+    test('pure barrel + pubspec import purple_openapi_core, drop core/*/result',
+        () async {
+      final tempDir = Directory.systemTemp.createTempSync('oafg_pure_');
+      try {
+        final generator = CodeGenerator(
+          doc: apiDoc,
+          outputDir: tempDir.path,
+          packageName: 'pure_client',
+          useIsolates: false,
+          useCompute: false,
+          pureSurface: true,
+          corePackage: 'purple_openapi_core',
+        );
+        await generator.generate();
+
+        final outputPath = p.join(tempDir.path, 'pure_client');
+
+        // Barrel exports the core package, not src/core/* or *_result.
+        final barrel =
+            File(p.join(outputPath, 'lib', 'pure_client.dart')).readAsStringSync();
+        expect(
+            barrel,
+            contains(
+                "export 'package:purple_openapi_core/purple_openapi_core.dart';"));
+        expect(barrel, isNot(contains('src/core/')),
+            reason: 'pure barrel drops src/core/* exports');
+        expect(barrel, isNot(contains('_result.dart')),
+            reason: 'pure barrel drops *_result exports');
+        expect(barrel, contains("export 'src/api/pets_api.dart';"));
+
+        // No src/core/ directory / files are emitted in pure mode.
+        final coreDir = Directory(p.join(outputPath, 'lib', 'src', 'core'));
+        expect(coreDir.existsSync(), isFalse,
+            reason: 'pure mode must not emit lib/src/core/');
+
+        // No *_result.dart files under src/api/.
+        final apiDir = Directory(p.join(outputPath, 'lib', 'src', 'api'));
+        final apiFiles = apiDir
+            .listSync()
+            .whereType<File>()
+            .map((f) => p.basename(f.path))
+            .toList();
+        expect(apiFiles.any((f) => f.contains('_result.dart')), isFalse);
+        expect(apiFiles, contains('api_client.dart'));
+
+        // pubspec swaps dio/collection for the purple_openapi_core git-dep.
+        final pubspec =
+            File(p.join(outputPath, 'pubspec.yaml')).readAsStringSync();
+        expect(pubspec, contains('purple_openapi_core:'));
+        expect(pubspec, contains('git:'));
+        expect(pubspec, contains('path: packages/purple_openapi_core'));
+        expect(pubspec, isNot(contains('\n  dio:')),
+            reason: 'pure pubspec drops the direct dio dep');
+      } finally {
+        _cleanupDir(tempDir);
+      }
+    });
+
+    test('legacy (default) mode stays byte-identical: still emits *Result, '
+        'dio import, core/*', () {
+      final files = ApiGenerator.generateServices(
+        {'pets': apiDoc.operationsByTag['pets']!},
+        packageName: 'test_api',
+        servers: apiDoc.servers,
+      );
+      final c = files
+          .firstWhere((f) => f.path.contains('pets_api.dart'))
+          .content;
+      // Default path is unchanged: dio import + *Result return types.
+      expect(c, contains("import 'package:dio/dio.dart';"));
+      expect(c, contains('Future<GetPetResult> getPet({'));
+      expect(files.any((f) => f.path.contains('_result.dart')), isTrue);
+    });
+  });
+
+  group('Runtime package emitter (--emit-target=runtime)', () {
+    test('emits purple_openapi_core with the empty-token auth guard', () async {
+      final tempDir = Directory.systemTemp.createTempSync('oafg_runtime_');
+      try {
+        await RuntimePackageGenerator(
+          outputDir: tempDir.path,
+          packageName: 'purple_openapi_core',
+        ).generate();
+
+        final root = p.join(tempDir.path, 'purple_openapi_core');
+        expect(File(p.join(root, 'pubspec.yaml')).existsSync(), isTrue);
+        expect(
+            File(p.join(root, 'lib', 'purple_openapi_core.dart')).existsSync(),
+            isTrue);
+
+        // The empty/whitespace-token guard (the IDX12709 fix) is present:
+        // null OR trimmed-empty ⇒ NO Authorization header.
+        final auth =
+            File(p.join(root, 'lib', 'src', 'auth.dart')).readAsStringSync();
+        expect(auth, contains('class BearerAuthenticationProvider'));
+        expect(auth, contains('token.trim().isEmpty'),
+            reason:
+                'empty/whitespace token must yield no Authorization header');
+        expect(
+            auth,
+            contains(
+                'if (token == null || token.trim().isEmpty) return;'));
+
+        // Core surface types are all present.
+        final barrel = File(p.join(root, 'lib', 'purple_openapi_core.dart'))
+            .readAsStringSync();
+        expect(barrel, contains("export 'src/request_information.dart';"));
+        expect(barrel, contains("export 'src/request_adapter.dart';"));
+        expect(barrel, contains("export 'src/dio_request_adapter.dart';"));
+      } finally {
+        _cleanupDir(tempDir);
+      }
     });
   });
 }

@@ -23,6 +23,18 @@ void main(List<String> arguments) async {
     ..addFlag('use-compute',
         help: 'Generate Isolate.run wrappers for heavy JSON deserialization',
         defaultsTo: false)
+    ..addFlag('pure-surface',
+        help: 'Emit transport-neutral clients over an injected RequestAdapter '
+            '(pure-surface / Kiota-lite mode) instead of self-contained dio.',
+        defaultsTo: false)
+    ..addOption('core-package',
+        help: 'Package name for the shared pure-surface runtime.',
+        defaultsTo: 'purple_openapi_core')
+    ..addOption('emit-target',
+        allowed: ['client', 'runtime'],
+        help: 'client = generate a client from a spec (default); '
+            'runtime = emit the purple_openapi_core runtime package.',
+        defaultsTo: 'client')
     ..addFlag('help', abbr: 'h', help: 'Show usage', negatable: false);
 
   try {
@@ -39,8 +51,9 @@ void main(List<String> arguments) async {
 
     final specPath = results['spec'] as String?;
     final specUrl = results['spec-url'] as String?;
+    final emitTarget = results['emit-target'] as String;
 
-    if (specPath == null && specUrl == null) {
+    if (emitTarget == 'client' && specPath == null && specUrl == null) {
       stderr.writeln('Error: Either --spec or --spec-url is required');
       print('');
       print(parser.usage);
@@ -55,6 +68,9 @@ void main(List<String> arguments) async {
       packageName: results['package-name'] as String,
       useIsolates: !(results['no-isolates'] as bool),
       useCompute: results['use-compute'] as bool,
+      pureSurface: results['pure-surface'] as bool,
+      corePackage: results['core-package'] as String,
+      emitTarget: emitTarget,
     );
   } on ArgParserException catch (e) {
     stderr.writeln('Error: ${e.message}');

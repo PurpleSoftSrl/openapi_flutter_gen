@@ -20,6 +20,8 @@ class CodeGenerator {
   final String packageName;
   final bool useIsolates;
   final bool useCompute;
+  final bool pureSurface;
+  final String corePackage;
 
   CodeGenerator({
     required this.doc,
@@ -27,6 +29,8 @@ class CodeGenerator {
     required this.packageName,
     this.useIsolates = true,
     this.useCompute = false,
+    this.pureSurface = false,
+    this.corePackage = 'purple_openapi_core',
   });
 
   Future<void> generate() async {
@@ -35,8 +39,10 @@ class CodeGenerator {
         .create(recursive: true);
     await Directory(p.join(outputPath, 'lib', 'src', 'api'))
         .create(recursive: true);
-    await Directory(p.join(outputPath, 'lib', 'src', 'core'))
-        .create(recursive: true);
+    if (!pureSurface) {
+      await Directory(p.join(outputPath, 'lib', 'src', 'core'))
+          .create(recursive: true);
+    }
 
     final files = _collectAllFiles();
 
@@ -87,6 +93,8 @@ class CodeGenerator {
         packageName: packageName,
         servers: doc.servers,
         useCompute: useCompute,
+        pureSurface: pureSurface,
+        corePackage: corePackage,
       ));
 
       files.add(ApiGenerator.generateRootClient(
@@ -95,6 +103,8 @@ class CodeGenerator {
         servers: doc.servers,
         securitySchemes: doc.securitySchemes,
         useCompute: useCompute,
+        pureSurface: pureSurface,
+        corePackage: corePackage,
       ));
     }
 
@@ -105,6 +115,8 @@ class CodeGenerator {
       securitySchemes: doc.securitySchemes,
       schemas: doc.schemas,
       operationsByTag: doc.operationsByTag,
+      pureSurface: pureSurface,
+      corePackage: corePackage,
     ));
 
     return files;

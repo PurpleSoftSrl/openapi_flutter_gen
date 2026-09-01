@@ -9,6 +9,8 @@ class ApiGenerator {
     required String packageName,
     required List<IrServer> servers,
     bool useCompute = false,
+    bool pureSurface = false,
+    String corePackage = 'purple_openapi_core',
   }) {
     final files = <GeneratedFile>[];
 
@@ -16,12 +18,20 @@ class ApiGenerator {
       final tag = entry.key;
       final ops = entry.value;
       files.add(_generateService(tag, ops,
-          packageName: packageName, servers: servers, useCompute: useCompute));
+          packageName: packageName,
+          servers: servers,
+          useCompute: useCompute,
+          pureSurface: pureSurface,
+          corePackage: corePackage));
 
-      for (final op in ops) {
-        final responseGen = _generateOperationResponse(op,
-            packageName: packageName, useCompute: useCompute);
-        if (responseGen != null) files.add(responseGen);
+      // D-R1 (Option A): pure-surface emits no *_result.dart files — methods
+      // return the model directly and throw ApiException on non-2xx.
+      if (!pureSurface) {
+        for (final op in ops) {
+          final responseGen = _generateOperationResponse(op,
+              packageName: packageName, useCompute: useCompute);
+          if (responseGen != null) files.add(responseGen);
+        }
       }
     }
 
@@ -34,23 +44,31 @@ class ApiGenerator {
     required String packageName,
     required List<IrServer> servers,
     bool useCompute = false,
+    bool pureSurface = false,
+    String corePackage = 'purple_openapi_core',
   }) {
     final buf = StringBuffer(generateFileHeader());
     final className = '${sanitizeClassName(tag)}Api';
 
-    buf.writeln('import \'package:dio/dio.dart\';');
-    if (useCompute) {
-      buf.writeln('import \'dart:isolate\';');
-    }
+    if (pureSurface) {
+      // Single core import supplies RequestInformation/RequestAdapter/HttpMethod
+      // (+ re-exported FormData/MultipartFile/Uint8List for binary bodies).
+      buf.writeln('import \'package:$corePackage/$corePackage.dart\';');
+    } else {
+      buf.writeln('import \'package:dio/dio.dart\';');
+      if (useCompute) {
+        buf.writeln('import \'dart:isolate\';');
+      }
 
-    final needsTypedData = ops.any((op) =>
-        op.requestBody != null &&
-        op.requestBody!.content.values.any((mt) =>
-            mt.schema is IrPrimitiveSchema &&
-            (mt.schema as IrPrimitiveSchema).type == IrPrimitiveType.binary));
+      final needsTypedData = ops.any((op) =>
+          op.requestBody != null &&
+          op.requestBody!.content.values.any((mt) =>
+              mt.schema is IrPrimitiveSchema &&
+              (mt.schema as IrPrimitiveSchema).type == IrPrimitiveType.binary));
 
-    if (needsTypedData) {
-      buf.writeln('import \'dart:typed_data\';');
+      if (needsTypedData) {
+        buf.writeln('import \'dart:typed_data\';');
+      }
     }
     buf.writeln();
 
@@ -66,33 +84,56 @@ class ApiGenerator {
           if (importName != null) modelImports.add(importName);
         }
       }
+      // Pure-surface methods return the success model directly, so the api
+      // file needs those model imports too (legacy mode gets them via the
+      // *_result.dart files).
+      if (pureSurface) {
+        final success = _successSchema(op);
+        if (success != null) {
+          final importName = _schemaImportName(success);
+          if (importName != null) modelImports.add(importName);
+        }
+      }
     }
 
     for (final imp in modelImports.toList()..sort()) {
       buf.writeln('import \'../models/${imp.toLowerCase()}.dart\';');
     }
 
-    final resultImports = <String>{};
-    for (final op in ops) {
-      final cleanName =
-          sanitizeFieldName(op.operationId).replaceAll(RegExp(r'_+$'), '');
-      final resultFileName = '${cleanName}_result';
-      resultImports.add(resultFileName);
-    }
-    for (final imp in resultImports.toList()..sort()) {
-      buf.writeln('import \'${imp.toLowerCase()}.dart\';');
+    if (!pureSurface) {
+      final resultImports = <String>{};
+      for (final op in ops) {
+        final cleanName =
+            sanitizeFieldName(op.operationId).replaceAll(RegExp(r'_+$'), '');
+        final resultFileName = '${cleanName}_result';
+        resultImports.add(resultFileName);
+      }
+      for (final imp in resultImports.toList()..sort()) {
+        buf.writeln('import \'${imp.toLowerCase()}.dart\';');
+      }
     }
     buf.writeln();
 
     buf.writeln('class $className {');
-    buf.writeln('  const $className({required this.dio, this.baseUrl});');
-    buf.writeln();
-    buf.writeln('  final Dio dio;');
-    buf.writeln('  final String? baseUrl;');
+    if (pureSurface) {
+      buf.writeln('  const $className({required this.adapter, this.baseUrl});');
+      buf.writeln();
+      buf.writeln('  final RequestAdapter adapter;');
+      buf.writeln('  final String? baseUrl;');
+    } else {
+      buf.writeln('  const $className({required this.dio, this.baseUrl});');
+      buf.writeln();
+      buf.writeln('  final Dio dio;');
+      buf.writeln('  final String? baseUrl;');
+    }
     buf.writeln();
 
     for (final op in ops) {
-      _generateOperationMethod(buf, op, className, useCompute: useCompute);
+      if (pureSurface) {
+        _generateOperationMethodPure(buf, op);
+      } else {
+        _generateOperationMethod(buf, op, className, useCompute: useCompute);
+      }
     }
 
     buf.writeln('}');
@@ -248,6 +289,159 @@ class ApiGenerator {
     }
     buf.writeln('  }');
     buf.writeln();
+  }
+
+  /// The primary success (2xx) response schema, or null for no-content.
+  static IrSchema? _successSchema(IrOperation op) {
+    for (final r in op.responses) {
+      final code = int.tryParse(r.statusCode);
+      if (code != null && code >= 200 && code < 300) {
+        return r.content.values.firstOrNull?.schema;
+      }
+    }
+    return null;
+  }
+
+  /// True when the 2xx success schema deserializes to a scalar (no fromJson).
+  static bool _isPrimitiveSuccess(IrSchema s) =>
+      s is IrPrimitiveSchema || s is IrMapSchema;
+
+  /// The deserializer argument handed to `adapter.send`/`sendList` — always the
+  /// model's own `fromJson` (models are untouched).
+  static String _deserializerArg(IrSchema s) {
+    switch (s) {
+      case IrObjectSchema():
+        return '${sanitizeClassName(s.name)}.fromJson';
+      case IrRefSchema():
+        return '${sanitizeClassName(s.refName)}.fromJson';
+      case IrUnionSchema():
+        return '${sanitizeClassName(s.name)}.fromJson';
+      case IrEnumSchema():
+        return '${sanitizeClassName(s.name)}.fromJson';
+      case IrListSchema():
+        final item = s.items;
+        final inner = switch (item) {
+          IrObjectSchema() => sanitizeClassName(item.name),
+          IrRefSchema() => sanitizeClassName(item.refName),
+          IrUnionSchema() => sanitizeClassName(item.name),
+          IrEnumSchema() => sanitizeClassName(item.name),
+          _ => 'dynamic',
+        };
+        return '$inner.fromJson';
+      default:
+        return '(json) => json';
+    }
+  }
+
+  /// Pure-surface (Kiota-lite) operation method: builds a transport-neutral
+  /// [RequestInformation] (raw url template + path/query/header/body) and hands
+  /// it to the injected `adapter`. No dio, no *Result wrapper, no auth code.
+  static void _generateOperationMethodPure(StringBuffer buf, IrOperation op) {
+    final methodName = sanitizeFieldName(op.operationId);
+    final httpMethod = op.httpMethod.toLowerCase();
+    final success = _successSchema(op);
+    final retType = success == null ? 'void' : schemaToDartType(success);
+
+    if (op.description != null) {
+      buf.writeln('  /// ${op.description!.replaceAll('\n', '\n  /// ')}');
+    }
+
+    buf.write('  Future<$retType> $methodName({');
+
+    final methodParams = _methodParams(op);
+    for (final mp in methodParams) {
+      buf.writeln();
+      buf.write('    $mp,');
+    }
+    if (methodParams.isNotEmpty) buf.writeln();
+    buf.writeln('    Map<String, dynamic>? extra,');
+    buf.writeln('  }) async {');
+
+    // 1. Build RequestInformation with the RAW url template (tokens kept).
+    buf.writeln('    final requestInfo = RequestInformation(');
+    buf.writeln('      httpMethod: HttpMethod.$httpMethod,');
+    buf.writeln('      urlTemplate: \'${op.path}\',');
+    buf.writeln('      baseUrl: baseUrl,');
+    buf.writeln('    );');
+
+    // 2. Path params.
+    for (final param in op.parameters
+        .where((p) => p.location == IrParameterLocation.path)) {
+      final n = sanitizeFieldName(param.name);
+      buf.writeln(
+          '    requestInfo.pathParameters[\'${param.name}\'] = ${_serializeParamExpr(n, param.schema)};');
+    }
+    // 3. Query params (null-guarded; same serialization as legacy mode).
+    for (final param in op.parameters
+        .where((p) => p.location == IrParameterLocation.query)) {
+      final n = sanitizeFieldName(param.name);
+      buf.writeln(
+          '    if ($n != null) { requestInfo.queryParameters[\'${param.name}\'] = ${_serializeParamExpr(n, param.schema)}; }');
+    }
+    // 4. Header params.
+    for (final param in op.parameters
+        .where((p) => p.location == IrParameterLocation.header)) {
+      final n = sanitizeFieldName(param.name);
+      buf.writeln(
+          '    if ($n != null) { requestInfo.headers[\'${param.name}\'] = ${_serializeParamExpr(n, param.schema)}; }');
+    }
+    // 5. Body — reuse the exact toJson/list/multipart/binary decision logic.
+    _emitPureBody(buf, op);
+
+    // 6. extra → options bag.
+    buf.writeln('    if (extra != null) { requestInfo.options.addAll(extra); }');
+
+    // 7. Send through the adapter with the model's own fromJson.
+    if (success == null) {
+      buf.writeln('    return adapter.sendNoContent(requestInfo);');
+    } else if (success is IrListSchema) {
+      buf.writeln(
+          '    return adapter.sendList(requestInfo, ${_deserializerArg(success)});');
+    } else if (_isPrimitiveSuccess(success)) {
+      buf.writeln('    return adapter.sendPrimitive(requestInfo);');
+    } else {
+      buf.writeln(
+          '    return adapter.send(requestInfo, ${_deserializerArg(success)});');
+    }
+    buf.writeln('  }');
+    buf.writeln();
+  }
+
+  /// Emits the request body into `requestInfo` (pure mode), reusing the exact
+  /// toJson()/list/multipart/binary decision logic of the dio branch.
+  static void _emitPureBody(StringBuffer buf, IrOperation op) {
+    final hasBody = op.requestBody != null &&
+        op.requestBody!.content.isNotEmpty &&
+        op.requestBody!.content.values.first.schema != null;
+    if (!hasBody) return;
+
+    final paramName = _bodyParamName(op) ?? 'body';
+    final isRequired = op.requestBody!.isRequired;
+    final schema = op.requestBody!.content.values.first.schema;
+    final isMultipart =
+        op.requestBody!.content.keys.any((ct) => ct.contains('multipart'));
+    final isBinary = schema is IrPrimitiveSchema &&
+        schema.type == IrPrimitiveType.binary &&
+        !isMultipart;
+
+    if (isMultipart) {
+      final s = isRequired ? '.toFormData()' : '?.toFormData()';
+      buf.writeln('    requestInfo.setMultipartContent($paramName$s);');
+    } else if (isBinary) {
+      buf.writeln('    requestInfo.setStreamContent($paramName);');
+    } else {
+      String jsonExpr;
+      if (_needsToJson(schema) && schema is IrListSchema) {
+        jsonExpr = isRequired
+            ? '$paramName.map((e) => e.toJson()).toList()'
+            : '$paramName?.map((e) => e.toJson()).toList()';
+      } else if (_needsToJson(schema)) {
+        jsonExpr = isRequired ? '$paramName.toJson()' : '$paramName?.toJson()';
+      } else {
+        jsonExpr = paramName;
+      }
+      buf.writeln('    requestInfo.setJsonContent($jsonExpr);');
+    }
   }
 
   static List<String> _methodParams(IrOperation op) {
@@ -512,7 +706,14 @@ class ApiGenerator {
     required List<IrServer> servers,
     required Map<String, IrSecurityScheme> securitySchemes,
     bool useCompute = false,
+    bool pureSurface = false,
+    String corePackage = 'purple_openapi_core',
   }) {
+    if (pureSurface) {
+      return _generateRootClientPure(operationsByTag,
+          servers: servers, corePackage: corePackage);
+    }
+
     final buf = StringBuffer(generateFileHeader());
     buf.writeln('import \'package:dio/dio.dart\';');
     for (final _ in securitySchemes.keys) {
@@ -615,6 +816,48 @@ class ApiGenerator {
       final className = '${sanitizeClassName(tag)}Api';
       buf.writeln(
           '  $className get $fieldName => $className(dio: dio, baseUrl: baseUrl);');
+    }
+
+    buf.writeln('}');
+
+    return GeneratedFile(
+      path: 'lib/src/api/api_client.dart',
+      content: buf.toString(),
+    );
+  }
+
+  /// Pure-surface root client: `ApiClient({required RequestAdapter adapter,
+  /// baseUrl})` with one getter per tag passing (adapter, baseUrl). All dio /
+  /// interceptor / auth plumbing lives in the injected adapter.
+  static GeneratedFile _generateRootClientPure(
+    Map<String, List<IrOperation>> operationsByTag, {
+    required List<IrServer> servers,
+    required String corePackage,
+  }) {
+    final buf = StringBuffer(generateFileHeader());
+    buf.writeln('import \'package:$corePackage/$corePackage.dart\';');
+    buf.writeln();
+
+    for (final tag in operationsByTag.keys) {
+      buf.writeln(
+          'import \'${sanitizeClassName(tag).toLowerCase()}_api.dart\';');
+    }
+    buf.writeln();
+
+    final baseUrl = servers.isNotEmpty ? servers.first.url : '';
+
+    buf.writeln('class ApiClient {');
+    buf.writeln('  ApiClient({required this.adapter, this.baseUrl = \'$baseUrl\'});');
+    buf.writeln();
+    buf.writeln('  final RequestAdapter adapter;');
+    buf.writeln('  final String baseUrl;');
+    buf.writeln();
+
+    for (final tag in operationsByTag.keys) {
+      final fieldName = sanitizeFieldName(tag);
+      final className = '${sanitizeClassName(tag)}Api';
+      buf.writeln(
+          '  $className get $fieldName => $className(adapter: adapter, baseUrl: baseUrl);');
     }
 
     buf.writeln('}');

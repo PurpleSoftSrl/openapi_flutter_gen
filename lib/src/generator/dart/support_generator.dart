@@ -10,17 +10,31 @@ class SupportFilesGenerator {
     required Map<String, IrSecurityScheme> securitySchemes,
     required Map<String, IrSchema> schemas,
     required Map<String, List<IrOperation>> operationsByTag,
+    bool pureSurface = false,
+    String corePackage = 'purple_openapi_core',
   }) {
-    return [
-      _generatePubspec(packageName, info),
+    final files = <GeneratedFile>[
+      _generatePubspec(packageName, info,
+          pureSurface: pureSurface, corePackage: corePackage),
       _generateAnalysisOptions(),
       _generateBarrelFile(packageName,
-          schemas: schemas, operationsByTag: operationsByTag),
-      _generateInterceptorHelpers(),
-      _generatePaginationHelpers(),
-      _generateAuth(securitySchemes),
-      _generateErrorHandler(),
+          schemas: schemas,
+          operationsByTag: operationsByTag,
+          pureSurface: pureSurface,
+          corePackage: corePackage),
     ];
+
+    // Pure-surface clients consume all transport infra (interceptors,
+    // pagination, auth, error_handler) from the shared runtime package, so
+    // none of the src/core/* files are emitted.
+    if (!pureSurface) {
+      files.add(_generateInterceptorHelpers());
+      files.add(_generatePaginationHelpers());
+      files.add(_generateAuth(securitySchemes));
+      files.add(_generateErrorHandler());
+    }
+
+    return files;
   }
 
   static GeneratedFile _generateErrorHandler() {
@@ -231,11 +245,20 @@ class ApiErrorInterceptor extends Interceptor {
         path: 'lib/src/core/auth.dart', content: buf.toString());
   }
 
-  static GeneratedFile _generatePubspec(String packageName, IrApiInfo info) {
+  static GeneratedFile _generatePubspec(
+    String packageName,
+    IrApiInfo info, {
+    bool pureSurface = false,
+    String corePackage = 'purple_openapi_core',
+  }) {
+    final description =
+        info.description ?? 'Generated API client for ${info.title}';
     return GeneratedFile(
       path: 'pubspec.yaml',
-      content: generatePubspecContent(packageName,
-          info.description ?? 'Generated API client for ${info.title}'),
+      content: pureSurface
+          ? generatePureSurfacePubspecContent(
+              packageName, description, corePackage)
+          : generatePubspecContent(packageName, description),
     );
   }
 
@@ -259,16 +282,23 @@ linter:
     String packageName, {
     required Map<String, IrSchema> schemas,
     required Map<String, List<IrOperation>> operationsByTag,
+    bool pureSurface = false,
+    String corePackage = 'purple_openapi_core',
   }) {
     final buf = StringBuffer(generateFileHeader());
     buf.writeln();
 
     buf.writeln('export \'src/api/api_client.dart\';');
     buf.writeln();
-    buf.writeln('export \'src/core/interceptors.dart\';');
-    buf.writeln('export \'src/core/pagination.dart\';');
-    buf.writeln('export \'src/core/auth.dart\';');
-    buf.writeln('export \'src/core/error_handler.dart\';');
+    if (pureSurface) {
+      // All transport infra comes from the shared runtime package.
+      buf.writeln('export \'package:$corePackage/$corePackage.dart\';');
+    } else {
+      buf.writeln('export \'src/core/interceptors.dart\';');
+      buf.writeln('export \'src/core/pagination.dart\';');
+      buf.writeln('export \'src/core/auth.dart\';');
+      buf.writeln('export \'src/core/error_handler.dart\';');
+    }
 
     final modelExports = <String>[];
     final seenModels = <String>{};
@@ -291,12 +321,15 @@ linter:
       final tagFileName = sanitizeClassName(tag).toLowerCase();
       serviceExports.add('export \'src/api/${tagFileName}_api.dart\';');
 
-      for (final op in operationsByTag[tag]!) {
-        final cleanName =
-            sanitizeFieldName(op.operationId).replaceAll(RegExp(r'_+$'), '');
-        final resultFileName = '${cleanName}_result'.toLowerCase();
-        if (seenResults.add(resultFileName)) {
-          resultExports.add('export \'src/api/$resultFileName.dart\';');
+      // Pure-surface emits no *_result.dart files (D-R1 Option A).
+      if (!pureSurface) {
+        for (final op in operationsByTag[tag]!) {
+          final cleanName =
+              sanitizeFieldName(op.operationId).replaceAll(RegExp(r'_+$'), '');
+          final resultFileName = '${cleanName}_result'.toLowerCase();
+          if (seenResults.add(resultFileName)) {
+            resultExports.add('export \'src/api/$resultFileName.dart\';');
+          }
         }
       }
     }

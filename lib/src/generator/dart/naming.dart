@@ -141,3 +141,35 @@ dev_dependencies:
   test: 
 ''';
 }
+
+/// pubspec for a pure-surface (Kiota-lite) client: the transport runtime is
+/// provided by the shared `purple_openapi_core` package (git-dep, ref master),
+/// which replaces the direct `dio:`/`collection:` deps.
+String generatePureSurfacePubspecContent(
+    String packageName, String description, String corePackage) {
+  final safe = description
+      .replaceAll(RegExp(r'[\r\n]+'), ' ')
+      .replaceAll("'", "''")
+      .trim();
+  final safeDesc = safe.length > 120 ? '${safe.substring(0, 117)}...' : safe;
+  return '''
+name: $packageName
+description: '$safeDesc'
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  $corePackage:
+    git:
+      url: https://xamapps.visualstudio.com/PurpleFoundation/_git/purple_foundation
+      ref: master
+      path: packages/purple_openapi_core
+
+dev_dependencies:
+  lints:
+  test:
+''';
+}

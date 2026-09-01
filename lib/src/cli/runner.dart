@@ -2,6 +2,7 @@ import '../parser/loader.dart';
 import '../parser/openapi_parser.dart';
 import '../parser/swagger_normalizer.dart';
 import '../generator/generator.dart';
+import '../generator/runtime_generator.dart';
 
 class Runner {
   Future<void> run({
@@ -11,7 +12,19 @@ class Runner {
     String packageName = 'api_client',
     bool useIsolates = true,
     bool useCompute = false,
+    bool pureSurface = false,
+    String corePackage = 'purple_openapi_core',
+    String emitTarget = 'client',
   }) async {
+    if (emitTarget == 'runtime') {
+      print('Emitting runtime package: $corePackage');
+      await RuntimePackageGenerator(
+              outputDir: outputDir, packageName: corePackage)
+          .generate();
+      print('Done!');
+      return;
+    }
+
     print('Loading spec...');
     final specJson = specUrl != null
         ? await loadSpecFromUrl(specUrl)
@@ -34,6 +47,8 @@ class Runner {
       packageName: packageName,
       useIsolates: useIsolates,
       useCompute: useCompute,
+      pureSurface: pureSurface,
+      corePackage: corePackage,
     );
 
     await generator.generate();
