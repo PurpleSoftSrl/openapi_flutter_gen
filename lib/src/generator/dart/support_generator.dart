@@ -298,6 +298,14 @@ class ApiErrorInterceptor extends Interceptor {
       content: '''
 include: package:lints/recommended.yaml
 
+analyzer:
+  errors:
+    # Style-only lints that fight machine-generated output. Generated code is NEVER
+    # hand-edited (regenerate from the spec instead), so these are noise — real
+    # errors/warnings still fail. `use_null_aware_elements` fires on the null-guarded
+    # map/collection inserts the model serializers emit; ignore on generated code.
+    use_null_aware_elements: ignore
+
 linter:
   rules:
     - always_declare_return_types
