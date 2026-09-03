@@ -146,13 +146,22 @@ dev_dependencies:
 /// pubspec for a pure-surface (Kiota-lite) client: the transport runtime is
 /// provided by the shared `purple_openapi_core` package (git-dep, ref master),
 /// which replaces the direct `dio:`/`collection:` deps.
+///
+/// [usesDio] adds a direct `dio` dep when the client's binary/multipart
+/// operations import dio's `FormData`/`MultipartFile` (pure JSON clients don't
+/// touch dio directly — they only build a transport-neutral RequestInformation).
 String generatePureSurfacePubspecContent(
-    String packageName, String description, String corePackage) {
+    String packageName, String description, String corePackage,
+    {bool usesDio = false}) {
   final safe = description
       .replaceAll(RegExp(r'[\r\n]+'), ' ')
       .replaceAll("'", "''")
       .trim();
   final safeDesc = safe.length > 120 ? '${safe.substring(0, 117)}...' : safe;
+  final dioDep = usesDio
+      ? '  # Binary/multipart operations reference dio FormData/MultipartFile directly.\n'
+          '  dio: ^5.7.0\n'
+      : '';
   return '''
 name: $packageName
 description: '$safeDesc'
@@ -169,7 +178,7 @@ dependencies:
       url: https://xamapps.visualstudio.com/PurpleFoundation/_git/purple_foundation
       ref: master
       path: packages/purple_openapi_core
-
+$dioDep
 dev_dependencies:
   lints: ^6.0.0
   test: ^1.25.0

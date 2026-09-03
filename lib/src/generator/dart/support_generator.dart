@@ -15,7 +15,9 @@ class SupportFilesGenerator {
   }) {
     final files = <GeneratedFile>[
       _generatePubspec(packageName, info,
-          pureSurface: pureSurface, corePackage: corePackage),
+          pureSurface: pureSurface,
+          corePackage: corePackage,
+          usesDio: _usesDio(operationsByTag)),
       _generateAnalysisOptions(),
       _generateBarrelFile(packageName,
           schemas: schemas,
@@ -250,16 +252,44 @@ class ApiErrorInterceptor extends Interceptor {
     IrApiInfo info, {
     bool pureSurface = false,
     String corePackage = 'purple_openapi_core',
+    bool usesDio = false,
   }) {
     final description =
         info.description ?? 'Generated API client for ${info.title}';
     return GeneratedFile(
       path: 'pubspec.yaml',
       content: pureSurface
-          ? generatePureSurfacePubspecContent(
-              packageName, description, corePackage)
+          ? generatePureSurfacePubspecContent(packageName, description,
+              corePackage, usesDio: usesDio)
           : generatePubspecContent(packageName, description),
     );
+  }
+
+  /// True when any operation's binary/multipart body or binary response makes
+  /// the generated client import dio's `FormData`/`MultipartFile` directly — so
+  /// a pure-surface pubspec must carry a direct `dio` dep. Pure JSON clients
+  /// never touch dio (they build a transport-neutral RequestInformation), so
+  /// they get no dio dep. Mirrors the multipart/binary detection in
+  /// ApiGenerator.
+  static bool _usesDio(Map<String, List<IrOperation>> operationsByTag) {
+    bool opUsesDio(IrOperation op) {
+      final rb = op.requestBody;
+      final hasBody = rb != null && rb.content.isNotEmpty;
+      final isMultipart =
+          hasBody && rb.content.keys.any((ct) => ct.contains('multipart'));
+      final isBinaryReq = hasBody &&
+          rb.content.values.any((mt) {
+            final s = mt.schema;
+            return s is IrPrimitiveSchema && s.type == IrPrimitiveType.binary;
+          });
+      final hasBinaryResp = op.responses.any((r) => r.content.values.any((mt) {
+            final s = mt.schema;
+            return s is IrPrimitiveSchema && s.type == IrPrimitiveType.binary;
+          }));
+      return isMultipart || isBinaryReq || hasBinaryResp;
+    }
+
+    return operationsByTag.values.any((ops) => ops.any(opUsesDio));
   }
 
   static GeneratedFile _generateAnalysisOptions() {
