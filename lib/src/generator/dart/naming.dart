@@ -128,17 +128,18 @@ name: $packageName
 description: '$safeDesc'
 version: 0.1.0
 publish_to: none
+resolution: workspace
 
 environment:
-  sdk: '>=3.4.0 <4.0.0'
+  sdk: ^3.12.0
 
 dependencies:
-  dio: 
-  collection: 
+  dio: ^5.7.0
+  collection: ^1.19.0
 
 dev_dependencies:
-  lints: 
-  test: 
+  lints: ^6.0.0
+  test: ^1.25.0
 ''';
 }
 
@@ -157,9 +158,10 @@ name: $packageName
 description: '$safeDesc'
 version: 0.1.0
 publish_to: none
+resolution: workspace
 
 environment:
-  sdk: '>=3.4.0 <4.0.0'
+  sdk: ^3.12.0
 
 dependencies:
   $corePackage:
@@ -169,7 +171,7 @@ dependencies:
       path: packages/purple_openapi_core
 
 dev_dependencies:
-  lints:
-  test:
+  lints: ^6.0.0
+  test: ^1.25.0
 ''';
 }
