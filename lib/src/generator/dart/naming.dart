@@ -122,7 +122,7 @@ String generatePubspecContent(String packageName, String description) {
       .replaceAll(RegExp(r'[\r\n]+'), ' ')
       .replaceAll("'", "''")
       .trim();
-  final safeDesc = safe.length > 120 ? '${safe.substring(0, 117)}...' : safe;
+  final safeDesc = safe.length > 180 ? '${safe.substring(0, 177)}...' : safe;
   return '''
 name: $packageName
 description: '$safeDesc'
@@ -157,7 +157,7 @@ String generatePureSurfacePubspecContent(
       .replaceAll(RegExp(r'[\r\n]+'), ' ')
       .replaceAll("'", "''")
       .trim();
-  final safeDesc = safe.length > 120 ? '${safe.substring(0, 117)}...' : safe;
+  final safeDesc = safe.length > 180 ? '${safe.substring(0, 177)}...' : safe;
   final dioDep = usesDio
       ? '  # Binary/multipart operations reference dio FormData/MultipartFile directly.\n'
           '  dio: ^5.11.1\n'
