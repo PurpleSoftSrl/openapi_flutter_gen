@@ -134,7 +134,7 @@ environment:
   sdk: ^3.12.0
 
 dependencies:
-  dio: ^5.7.0
+  dio: ^5.11.1
   collection: ^1.19.0
 
 dev_dependencies:
@@ -160,7 +160,7 @@ String generatePureSurfacePubspecContent(
   final safeDesc = safe.length > 120 ? '${safe.substring(0, 117)}...' : safe;
   final dioDep = usesDio
       ? '  # Binary/multipart operations reference dio FormData/MultipartFile directly.\n'
-          '  dio: ^5.7.0\n'
+          '  dio: ^5.11.1\n'
       : '';
   return '''
 name: $packageName
