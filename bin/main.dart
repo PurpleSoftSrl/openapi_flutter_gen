@@ -30,6 +30,11 @@ void main(List<String> arguments) async {
     ..addOption('core-package',
         help: 'Package name for the shared pure-surface runtime.',
         defaultsTo: 'purple_openapi_core')
+    ..addFlag('workspace',
+        help: 'Emit `resolution: workspace` in the generated pubspec (for a '
+            'pub-workspace monorepo). Off by default so the package is '
+            'standalone and `dart pub get` works without a workspace root.',
+        defaultsTo: false)
     ..addOption('emit-target',
         allowed: ['client', 'runtime'],
         help: 'client = generate a client from a spec (default); '
@@ -71,6 +76,7 @@ void main(List<String> arguments) async {
       pureSurface: results['pure-surface'] as bool,
       corePackage: results['core-package'] as String,
       emitTarget: emitTarget,
+      workspace: results['workspace'] as bool,
     );
   } on ArgParserException catch (e) {
     stderr.writeln('Error: ${e.message}');

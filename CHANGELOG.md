@@ -1,4 +1,11 @@
-## 0.2.12
+## 0.2.17
+
+- Fix (allOf composition): composed (`allOf`) models now keep ALL inherited properties from their `$ref`'d base chain at any nesting depth, plus their own — previously every inherited field was silently dropped. Two independent gaps closed: (1) `SwaggerNormalizer` was discarding `allOf`/`oneOf`/`anyOf` entirely when converting Swagger 2.0 definitions, so the parser never saw the composition; (2) the model generator ignored `allOfRefs` (`$ref` bases) and only emitted inline/own props. Now the base chain is resolved (parser links each allOf ref to its target) and merged (generator folds bases-first, own-last, derived wins on name clash). E.g. Azure DevOps `WorkItem` 5→7, `BuildDefinition` 19→38; flat schemas (`GitPullRequest` 35) unchanged.
+- Fix (query params / identifiers): OData `$`-prefixed params (`$top`, `$skip`, `$expand`, `$filter`) and hyphenated params (`api-version`) now emit valid Dart identifiers (the `$` sigil is stripped from class/field names) while the ORIGINAL name is preserved as the wire key. Wire keys, JSON keys, and URL paths containing `$` are escaped for the Dart string literal so they no longer trigger string interpolation (which caused `Expected an identifier` / `undefined_identifier` errors).
+- Fix (`ApiVersion` phantom model): Swagger 2.0 shared parameters (`#/parameters/api-Version` etc.) are now resolved against the top-level `parameters` section during normalization instead of being wrapped as a non-existent `ApiVersion` schema — this was the dominant compile-error class on Azure DevOps specs.
+- Fix (HTTP Basic auth): Swagger 2.0 `type: basic` security now generates a working `Authorization: Basic <base64>` interceptor (Azure DevOps PAT auth). The unknown-scheme fallback emits a self-contained no-op interceptor (previously referenced an undefined `_NoopInterceptor`).
+- New: `--workspace` flag. `resolution: workspace` is now opt-in; the default generated package is standalone so `dart pub get` succeeds without a pub-workspace root.
+
 
 - Fix: `format: date` fields now serialize to date-only `yyyy-MM-dd` (previously a full ISO datetime `…T00:00:00.000`), which a server binding a date-only type (e.g. .NET `DateOnly`) rejected with a 400.
 - Fix: arrays of `date` / `date-time` now serialize element-by-element in `toJson` (a raw `List<DateTime>` is not JSON-encodable → `jsonEncode` threw at send time) and deserialize element-by-element in `fromJson` (a bare `.cast<DateTime>()` over decoded strings threw at runtime).

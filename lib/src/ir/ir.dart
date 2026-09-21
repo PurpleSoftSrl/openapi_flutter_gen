@@ -13,7 +13,10 @@ sealed class IrSchema {
 
 class IrRefSchema extends IrSchema {
   final String refName;
-  final IrSchema? resolved;
+
+  /// The schema this ref points to. Populated late (after all named schemas are
+  /// parsed) for allOf bases so the generator can fold inherited properties in.
+  IrSchema? resolved;
 
   IrRefSchema({
     required this.refName,

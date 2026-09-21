@@ -188,14 +188,17 @@ class ApiGenerator {
 
     for (final param in op.parameters) {
       final pName = sanitizeFieldName(param.name);
+      // Wire key keeps the ORIGINAL param name (`$top`, `api-version`), escaped
+      // so its `$` does not become Dart interpolation inside the string literal.
+      final wireKey = escapeDartString(param.name);
       switch (param.location) {
         case IrParameterLocation.header:
           buf.writeln(
-              '    if ($pName != null) { reqHeaders[\'${param.name}\'] = ${_serializeParamExpr(pName, param.schema)}; }');
+              '    if ($pName != null) { reqHeaders[\'$wireKey\'] = ${_serializeParamExpr(pName, param.schema)}; }');
           break;
         case IrParameterLocation.query:
           buf.writeln(
-              '    if ($pName != null) { reqQueryParams[\'${param.name}\'] = ${_serializeParamExpr(pName, param.schema)}; }');
+              '    if ($pName != null) { reqQueryParams[\'$wireKey\'] = ${_serializeParamExpr(pName, param.schema)}; }');
           break;
         default:
           break;
@@ -358,32 +361,35 @@ class ApiGenerator {
     buf.writeln('  }) async {');
 
     // 1. Build RequestInformation with the RAW url template (tokens kept).
+    //    Escape literal `$` in the path (Azure `.../${type}`) so it is not read
+    //    as Dart interpolation; `{token}` markers are preserved for the runtime.
     buf.writeln('    final requestInfo = RequestInformation(');
     buf.writeln('      httpMethod: HttpMethod.$httpMethod,');
-    buf.writeln('      urlTemplate: \'${op.path}\',');
+    buf.writeln('      urlTemplate: \'${escapeDartString(op.path)}\',');
     buf.writeln('      baseUrl: baseUrl,');
     buf.writeln('    );');
 
-    // 2. Path params.
+    // 2. Path params. Wire keys keep the original param name (escaped for the
+    //    Dart string literal).
     for (final param in op.parameters
         .where((p) => p.location == IrParameterLocation.path)) {
       final n = sanitizeFieldName(param.name);
       buf.writeln(
-          '    requestInfo.pathParameters[\'${param.name}\'] = ${_serializeParamExpr(n, param.schema)};');
+          '    requestInfo.pathParameters[\'${escapeDartString(param.name)}\'] = ${_serializeParamExpr(n, param.schema)};');
     }
     // 3. Query params (null-guarded; same serialization as legacy mode).
     for (final param in op.parameters
         .where((p) => p.location == IrParameterLocation.query)) {
       final n = sanitizeFieldName(param.name);
       buf.writeln(
-          '    if ($n != null) { requestInfo.queryParameters[\'${param.name}\'] = ${_serializeParamExpr(n, param.schema)}; }');
+          '    if ($n != null) { requestInfo.queryParameters[\'${escapeDartString(param.name)}\'] = ${_serializeParamExpr(n, param.schema)}; }');
     }
     // 4. Header params.
     for (final param in op.parameters
         .where((p) => p.location == IrParameterLocation.header)) {
       final n = sanitizeFieldName(param.name);
       buf.writeln(
-          '    if ($n != null) { requestInfo.headers[\'${param.name}\'] = ${_serializeParamExpr(n, param.schema)}; }');
+          '    if ($n != null) { requestInfo.headers[\'${escapeDartString(param.name)}\'] = ${_serializeParamExpr(n, param.schema)}; }');
     }
     // 5. Body — reuse the exact toJson/list/multipart/binary decision logic.
     _emitPureBody(buf, op);
@@ -504,7 +510,11 @@ class ApiGenerator {
   }
 
   static String _buildPathUrl(IrOperation op) {
-    var path = op.path;
+    // Escape the raw path FIRST so any literal `$` (Azure uses `.../${type}`)
+    // becomes `\$` and won't be read as Dart interpolation; only the deliberate
+    // `$pName` interpolations we inject below stay live. The `{token}` markers
+    // survive escaping unchanged, so replacement still matches.
+    var path = escapeDartString(op.path);
     for (final param in op.parameters) {
       if (param.location == IrParameterLocation.path) {
         final pName = sanitizeFieldName(param.name);

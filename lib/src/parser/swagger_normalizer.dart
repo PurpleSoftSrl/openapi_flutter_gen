@@ -7,8 +7,18 @@
 class SwaggerNormalizer {
   SwaggerNormalizer._();
 
+  /// Swagger 2.0's top-level shared `parameters` section (`#/parameters/<X>`),
+  /// captured for the duration of one [normalize] call so operation-level
+  /// `$ref` parameters can be resolved to their real definitions instead of
+  /// being wrapped as a phantom schema (the source of the missing `ApiVersion`
+  /// model — Azure DevOps refs `#/parameters/api-Version` on nearly every op).
+  static Map<String, dynamic> _sharedParams = const {};
+
   static Map<String, dynamic> normalize(Map<String, dynamic> swagger) {
     if (!_isSwagger2(swagger)) return swagger;
+
+    final rawShared = swagger['parameters'];
+    _sharedParams = rawShared is Map<String, dynamic> ? rawShared : const {};
 
     final result = <String, dynamic>{};
     result['openapi'] = '3.0.0';
@@ -19,7 +29,20 @@ class SwaggerNormalizer {
     _normalizeSchemas(swagger, result);
     _normalizeSecurity(swagger, result);
 
+    _sharedParams = const {};
     return result;
+  }
+
+  /// Resolves a Swagger 2.0 parameter that may be a `{$ref: #/parameters/X}`
+  /// into its concrete definition from the shared `parameters` section. A
+  /// non-ref parameter is returned unchanged.
+  static Map<String, dynamic> _resolveParam(Map<String, dynamic> param) {
+    final ref = param[r'$ref'];
+    if (ref is! String) return param;
+    const prefix = '#/parameters/';
+    if (!ref.startsWith(prefix)) return param;
+    final target = _sharedParams[ref.substring(prefix.length)];
+    return target is Map<String, dynamic> ? target : param;
   }
 
   static bool _isSwagger2(Map<String, dynamic> doc) =>
@@ -111,6 +134,21 @@ class SwaggerNormalizer {
       return result;
     }
 
+    // Preserve schema composition (allOf / oneOf / anyOf). Swagger 2.0 models
+    // routinely express inheritance via `allOf: [{$ref: Base}, {properties…}]`.
+    // Dropping these here silently strips every inherited property from the
+    // derived model — the composed subschemas must be converted recursively so
+    // the OAS3 parser can fold the base chain back in.
+    for (final composeKey in ['allOf', 'oneOf', 'anyOf']) {
+      final compose = schema[composeKey];
+      if (compose is List) {
+        result[composeKey] = compose
+            .map((sub) =>
+                sub is Map<String, dynamic> ? _convertPropertySchema(sub) : sub)
+            .toList();
+      }
+    }
+
     if (schema.containsKey('properties')) {
       final props = schema['properties'];
       if (props is Map<String, dynamic>) {
@@ -172,6 +210,7 @@ class SwaggerNormalizer {
 
     final pathParams = (pathItem['parameters'] as List<dynamic>?)
             ?.whereType<Map<String, dynamic>>()
+            .map(_resolveParam)
             .toList() ??
         [];
 
@@ -199,6 +238,7 @@ class SwaggerNormalizer {
     final allParams = <Map<String, dynamic>>[...pathParams];
     final opParams = (operation['parameters'] as List<dynamic>?)
             ?.whereType<Map<String, dynamic>>()
+            .map(_resolveParam)
             .toList() ??
         [];
 

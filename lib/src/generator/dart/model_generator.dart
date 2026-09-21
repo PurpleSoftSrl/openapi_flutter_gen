@@ -50,19 +50,60 @@ class ModelGenerator {
     );
   }
 
+  /// Collects the full effective property set of an object schema, folding in
+  /// every `allOf` subschema (both inline objects and `$ref`'d bases, at any
+  /// nesting depth). OpenAPI `allOf` is composition/merge: a derived type keeps
+  /// ALL properties from its base chain plus its own. Bases are emitted first,
+  /// then the type's own properties; on a name clash the derived (own) property
+  /// wins (it stays in base position, but with the derived definition).
+  static List<IrProperty> _collectAllProps(IrObjectSchema schema,
+      [Set<String>? seen]) {
+    seen ??= <String>{};
+    final ordered = <IrProperty>[];
+    final byName = <String, int>{};
+
+    void add(IrProperty prop) {
+      final existing = byName[prop.name];
+      if (existing != null) {
+        // Derived/own definition wins over an inherited one of the same name.
+        ordered[existing] = prop;
+      } else {
+        byName[prop.name] = ordered.length;
+        ordered.add(prop);
+      }
+    }
+
+    // 1. Inherited props from `$ref`'d bases (recursively — handles multi-level
+    //    chains like BuildDefinition -> BuildDefinitionReference -> DefinitionReference).
+    for (final ref in schema.allOfRefs) {
+      final base = ref.resolved;
+      if (base is IrObjectSchema && seen.add(base.name)) {
+        for (final prop in _collectAllProps(base, seen)) {
+          add(prop);
+        }
+      }
+    }
+
+    // 2. Inherited props from inline allOf subschemas (no $ref).
+    for (final inline in schema.allOfInline) {
+      for (final prop in _collectAllProps(inline, seen)) {
+        add(prop);
+      }
+    }
+
+    // 3. The type's own directly-declared properties (win on name clash).
+    for (final prop in schema.properties) {
+      add(prop);
+    }
+
+    return ordered;
+  }
+
   static GeneratedFile _generateObject(IrObjectSchema schema,
       {required String packageName}) {
     final buf = StringBuffer(generateFileHeader());
 
-    final allProps = <IrProperty>[];
-
-    for (final inline in schema.allOfInline) {
-      for (final prop in inline.properties) {
-        allProps.add(prop);
-      }
-    }
-
-    allProps.addAll(schema.properties);
+    final allProps = _collectAllProps(schema);
 
     final imports = <String>{};
 
@@ -152,7 +193,7 @@ class ModelGenerator {
     buf.writeln('    final fd = FormData();');
     for (final prop in allProps) {
       final fieldName = sanitizeFieldName(prop.name);
-      final jsonKey = prop.jsonKey ?? prop.name;
+      final jsonKey = escapeDartString(prop.jsonKey ?? prop.name);
       final schema = prop.schema;
       final isRequiredAndNonNullable = prop.isRequired && !prop.isNullable;
       if (schema is IrPrimitiveSchema &&
@@ -208,7 +249,7 @@ class ModelGenerator {
     for (int i = 0; i < sourceProps.length; i++) {
       final prop = sourceProps[i];
       final fieldName = sanitizeFieldName(prop.name);
-      final jsonKey = prop.jsonKey ?? prop.name;
+      final jsonKey = escapeDartString(prop.jsonKey ?? prop.name);
 
       if (prop.isRequired && !prop.isNullable) {
         buf.writeln(
@@ -233,7 +274,7 @@ class ModelGenerator {
 
     for (final prop in allProps) {
       final fieldName = sanitizeFieldName(prop.name);
-      final jsonKey = prop.jsonKey ?? prop.name;
+      final jsonKey = escapeDartString(prop.jsonKey ?? prop.name);
 
       if (prop.isRequired && !prop.isNullable) {
         buf.writeln(
@@ -610,7 +651,7 @@ class ModelGenerator {
           '  factory $varClassName.fromJson(Map<String, dynamic> json) => $varClassName(');
       for (final prop in variantSchema.properties) {
         final fieldName = sanitizeFieldName(prop.name);
-        final jsonKey = prop.jsonKey ?? prop.name;
+        final jsonKey = escapeDartString(prop.jsonKey ?? prop.name);
         buf.writeln(
             '    $fieldName: ${_fromJsonExpr('json[\'$jsonKey\']', prop.schema)},');
       }
@@ -621,7 +662,7 @@ class ModelGenerator {
       buf.writeln('  Map<String, dynamic> toJson() => {');
       for (final prop in variantSchema.properties) {
         final fieldName = sanitizeFieldName(prop.name);
-        final jsonKey = prop.jsonKey ?? prop.name;
+        final jsonKey = escapeDartString(prop.jsonKey ?? prop.name);
         buf.writeln(
             '    \'$jsonKey\': ${_toJsonExpr(fieldName, prop.schema)},');
       }
