@@ -22,6 +22,7 @@ class CodeGenerator {
   final bool useCompute;
   final bool pureSurface;
   final String corePackage;
+  final bool workspace;
 
   CodeGenerator({
     required this.doc,
@@ -31,6 +32,7 @@ class CodeGenerator {
     this.useCompute = false,
     this.pureSurface = false,
     this.corePackage = 'purple_openapi_core',
+    this.workspace = false,
   });
 
   Future<void> generate() async {
@@ -117,6 +119,7 @@ class CodeGenerator {
       operationsByTag: doc.operationsByTag,
       pureSurface: pureSurface,
       corePackage: corePackage,
+      workspace: workspace,
     ));
 
     return files;

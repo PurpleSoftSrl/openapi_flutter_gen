@@ -2,6 +2,11 @@ String _toPascalCase(String s) {
   if (s.isEmpty) return s;
   return s
       .replaceAll(RegExp(r'[\[\]]+'), '_')
+      // Drop the `$` OData sigil (Azure uses $top/$skip/$expand/$filter…). It is
+      // not a valid Dart identifier char and must never leak into a class/field
+      // name, while the ORIGINAL param name (with `$`) is still used as the wire
+      // key by the api generator.
+      .replaceAll(r'$', '')
       .split(RegExp(r'[\._\-\s]+'))
       .where((p) => p.isNotEmpty)
       .map((p) => p[0].toUpperCase() + p.substring(1))
@@ -100,6 +105,17 @@ String safeDartName(String name) {
 
 String sanitizeClassName(String name) => safeDartName(_toPascalCase(name));
 
+/// Escapes a raw wire string (JSON key, query-param name, URL path) for safe
+/// embedding inside a single-quoted Dart string literal. Azure DevOps uses
+/// OData `$`-prefixed keys (`$expand`, `$top`) and `$`-containing path segments
+/// (`.../workitems/${type}`); an unescaped `$` triggers Dart interpolation and
+/// either references an undefined member or is a syntax error. Backslash and the
+/// single quote are escaped too so arbitrary keys round-trip literally.
+String escapeDartString(String raw) => raw
+    .replaceAll(r'\', r'\\')
+    .replaceAll(r'$', r'\$')
+    .replaceAll("'", r"\'");
+
 String indent(String code, {int level = 1}) {
   final indent = '  ' * level;
   return code.splitMapJoin('\n', onNonMatch: (line) {
@@ -117,18 +133,22 @@ String generateFileHeader() {
 ''';
 }
 
-String generatePubspecContent(String packageName, String description) {
+String generatePubspecContent(String packageName, String description,
+    {bool workspace = false}) {
   final safe = description
       .replaceAll(RegExp(r'[\r\n]+'), ' ')
       .replaceAll("'", "''")
       .trim();
   final safeDesc = safe.length > 180 ? '${safe.substring(0, 177)}...' : safe;
+  // `resolution: workspace` requires a pub-workspace root in a parent dir; a
+  // standalone generated package has none, so `dart pub get` fails outright.
+  // Emit it only when the caller opts into monorepo/workspace layout.
+  final resolutionLine = workspace ? '\nresolution: workspace' : '';
   return '''
 name: $packageName
 description: '$safeDesc'
 version: 0.1.0
-publish_to: none
-resolution: workspace
+publish_to: none$resolutionLine
 
 environment:
   sdk: ^3.12.0
@@ -152,7 +172,7 @@ dev_dependencies:
 /// touch dio directly — they only build a transport-neutral RequestInformation).
 String generatePureSurfacePubspecContent(
     String packageName, String description, String corePackage,
-    {bool usesDio = false}) {
+    {bool usesDio = false, bool workspace = false}) {
   final safe = description
       .replaceAll(RegExp(r'[\r\n]+'), ' ')
       .replaceAll("'", "''")
@@ -162,12 +182,13 @@ String generatePureSurfacePubspecContent(
       ? '  # Binary/multipart operations reference dio FormData/MultipartFile directly.\n'
           '  dio: ^5.11.1\n'
       : '';
+  // See generatePubspecContent: workspace resolution is opt-in only.
+  final resolutionLine = workspace ? '\nresolution: workspace' : '';
   return '''
 name: $packageName
 description: '$safeDesc'
 version: 0.1.0
-publish_to: none
-resolution: workspace
+publish_to: none$resolutionLine
 
 environment:
   sdk: ^3.12.0

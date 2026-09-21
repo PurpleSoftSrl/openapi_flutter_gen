@@ -411,11 +411,16 @@ class OpenApiSpecParser {
     );
   }
 
-  void _resolveAllOfRefs(IrObjectSchema schema) {
+  void _resolveAllOfRefs(IrObjectSchema schema, [Set<String>? seen]) {
+    seen ??= <String>{};
+    if (!seen.add(schema.name)) return;
     for (final ref in schema.allOfRefs) {
       final resolved = _schemas[ref.refName];
+      // Link the ref to its target so the model generator can walk the base
+      // chain and merge inherited properties (allOf = composition/merge).
+      ref.resolved = resolved;
       if (resolved is IrObjectSchema) {
-        _resolveAllOfRefs(resolved);
+        _resolveAllOfRefs(resolved, seen);
       }
     }
   }
@@ -827,7 +832,10 @@ class OpenApiSpecParser {
 
   static String _toPascalCase(String s) {
     if (s.isEmpty) return s;
-    return s.split(RegExp(r'[\._\-\s]+')).map((part) {
+    // Strip the `$` OData sigil ($top/$skip/$expand/api-version enums) so it
+    // never leaks into a Dart class/identifier; the wire name is preserved by
+    // the api generator, which keeps the original param name for the query key.
+    return s.replaceAll(r'$', '').split(RegExp(r'[\._\-\s]+')).map((part) {
       if (part.isEmpty) return '';
       return part[0].toUpperCase() + part.substring(1);
     }).join();

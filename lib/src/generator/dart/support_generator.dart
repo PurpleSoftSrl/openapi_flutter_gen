@@ -12,12 +12,14 @@ class SupportFilesGenerator {
     required Map<String, List<IrOperation>> operationsByTag,
     bool pureSurface = false,
     String corePackage = 'purple_openapi_core',
+    bool workspace = false,
   }) {
     final files = <GeneratedFile>[
       _generatePubspec(packageName, info,
           pureSurface: pureSurface,
           corePackage: corePackage,
           usesDio: _usesDio(operationsByTag),
+          workspace: workspace,
           tags: operationsByTag.keys.join(' / ')),
       _generateAnalysisOptions(),
       _generateBarrelFile(packageName,
@@ -113,6 +115,9 @@ class ApiErrorInterceptor extends Interceptor {
           content: '// No security schemes defined\n');
 
     final buf = StringBuffer(generateFileHeader());
+    // HTTP Basic auth encodes credentials via base64Encode/utf8 (dart:convert).
+    final needsConvert = schemes.values.any((s) => s.type == 'basic');
+    if (needsConvert) buf.writeln('import \'dart:convert\';');
     buf.writeln('import \'package:dio/dio.dart\';');
     buf.writeln();
 
@@ -234,11 +239,48 @@ class ApiErrorInterceptor extends Interceptor {
           buf.writeln();
           break;
 
-        default:
+        case 'basic':
+          // Swagger 2.0 HTTP Basic (Azure DevOps PAT: any username + token as
+          // password). Emits a self-contained interceptor that sets the
+          // Authorization: Basic base64(user:pass) header.
           buf.writeln('class $className {');
           buf.writeln(
-              '  Interceptor createInterceptor() => _NoopInterceptor();');
+              '  $className({this.username = \'\', required this.password});');
+          buf.writeln();
+          buf.writeln('  final String username;');
+          buf.writeln('  final String password;');
+          buf.writeln();
+          buf.writeln(
+              '  Interceptor createInterceptor() => _${className}Interceptor(this);');
           buf.writeln('}');
+          buf.writeln();
+          buf.writeln('class _${className}Interceptor extends Interceptor {');
+          buf.writeln('  _${className}Interceptor(this.security);');
+          buf.writeln('  final $className security;');
+          buf.writeln();
+          buf.writeln('  @override');
+          buf.writeln(
+              '  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {');
+          buf.writeln(
+              '    final creds = base64Encode(utf8.encode(\'\${security.username}:\${security.password}\'));');
+          buf.writeln(
+              '    options.headers[\'Authorization\'] = \'Basic \$creds\';');
+          buf.writeln('    handler.next(options);');
+          buf.writeln('  }');
+          buf.writeln('}');
+          buf.writeln();
+          break;
+
+        default:
+          // Unknown/unsupported scheme: emit a compiling no-op interceptor so
+          // the generated client always builds (the scheme simply adds nothing).
+          buf.writeln('class $className {');
+          buf.writeln(
+              '  Interceptor createInterceptor() => _${className}NoopInterceptor();');
+          buf.writeln('}');
+          buf.writeln();
+          buf.writeln(
+              'class _${className}NoopInterceptor extends Interceptor {}');
           buf.writeln();
           break;
       }
@@ -254,6 +296,7 @@ class ApiErrorInterceptor extends Interceptor {
     bool pureSurface = false,
     String corePackage = 'purple_openapi_core',
     bool usesDio = false,
+    bool workspace = false,
     String tags = '',
   }) {
     // A meaningful, self-describing fallback (used when the spec carries no
@@ -270,8 +313,9 @@ class ApiErrorInterceptor extends Interceptor {
       path: 'pubspec.yaml',
       content: pureSurface
           ? generatePureSurfacePubspecContent(packageName, description,
-              corePackage, usesDio: usesDio)
-          : generatePubspecContent(packageName, description),
+              corePackage, usesDio: usesDio, workspace: workspace)
+          : generatePubspecContent(packageName, description,
+              workspace: workspace),
     );
   }
 

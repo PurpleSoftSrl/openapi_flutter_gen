@@ -15,6 +15,7 @@ class Runner {
     bool pureSurface = false,
     String corePackage = 'purple_openapi_core',
     String emitTarget = 'client',
+    bool workspace = false,
   }) async {
     if (emitTarget == 'runtime') {
       print('Emitting runtime package: $corePackage');
@@ -49,6 +50,7 @@ class Runner {
       useCompute: useCompute,
       pureSurface: pureSurface,
       corePackage: corePackage,
+      workspace: workspace,
     );
 
     await generator.generate();
