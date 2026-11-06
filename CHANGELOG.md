@@ -6,6 +6,25 @@
 - Fix (HTTP Basic auth): Swagger 2.0 `type: basic` security now generates a working `Authorization: Basic <base64>` interceptor (Azure DevOps PAT auth). The unknown-scheme fallback emits a self-contained no-op interceptor (previously referenced an undefined `_NoopInterceptor`).
 - New: `--workspace` flag. `resolution: workspace` is now opt-in; the default generated package is standalone so `dart pub get` succeeds without a pub-workspace root.
 
+## 0.2.16
+
+- Generated client descriptions lead with the covered surface and tags; the length cap goes from 120 to 180 characters.
+
+## 0.2.15
+
+- Generated pubspecs get a meaningful description when the spec has no `info.description`: covered tags, pure-surface or not, and a do-not-hand-edit note.
+
+## 0.2.14
+
+- Generated client pubspecs declare `dio: ^5.11.1` instead of a stale floor.
+
+## 0.2.13
+
+- New opt-in pure-surface mode (`--pure-surface`, `--core-package`, `--emit-target`): transport-neutral clients over an injected `RequestAdapter`.
+- Generated client pubspecs are workspace-ready with versioned dependencies; pure-surface clients declare `dio` only when they use it.
+- Generated code ignores `use_null_aware_elements`, so fresh clients are lint-clean.
+
+## 0.2.12
 
 - Fix: `format: date` fields now serialize to date-only `yyyy-MM-dd` (previously a full ISO datetime `…T00:00:00.000`), which a server binding a date-only type (e.g. .NET `DateOnly`) rejected with a 400.
 - Fix: arrays of `date` / `date-time` now serialize element-by-element in `toJson` (a raw `List<DateTime>` is not JSON-encodable → `jsonEncode` threw at send time) and deserialize element-by-element in `fromJson` (a bare `.cast<DateTime>()` over decoded strings threw at runtime).
