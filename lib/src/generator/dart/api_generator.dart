@@ -371,8 +371,8 @@ class ApiGenerator {
 
     // 2. Path params. Wire keys keep the original param name (escaped for the
     //    Dart string literal).
-    for (final param in op.parameters
-        .where((p) => p.location == IrParameterLocation.path)) {
+    for (final param
+        in op.parameters.where((p) => p.location == IrParameterLocation.path)) {
       final n = sanitizeFieldName(param.name);
       buf.writeln(
           '    requestInfo.pathParameters[\'${escapeDartString(param.name)}\'] = ${_serializeParamExpr(n, param.schema)};');
@@ -395,7 +395,8 @@ class ApiGenerator {
     _emitPureBody(buf, op);
 
     // 6. extra → options bag.
-    buf.writeln('    if (extra != null) { requestInfo.options.addAll(extra); }');
+    buf.writeln(
+        '    if (extra != null) { requestInfo.options.addAll(extra); }');
 
     // 7. Send through the adapter with the model's own fromJson.
     if (success == null) {
@@ -857,7 +858,8 @@ class ApiGenerator {
     final baseUrl = servers.isNotEmpty ? servers.first.url : '';
 
     buf.writeln('class ApiClient {');
-    buf.writeln('  ApiClient({required this.adapter, this.baseUrl = \'$baseUrl\'});');
+    buf.writeln(
+        '  ApiClient({required this.adapter, this.baseUrl = \'$baseUrl\'});');
     buf.writeln();
     buf.writeln('  final RequestAdapter adapter;');
     buf.writeln('  final String baseUrl;');

@@ -1,7 +1,9 @@
 ## 0.2.18
 
-- Dependencies upgraded for Flutter 3.50 / Dart 3.14 (`dart pub upgrade --major-versions`); analyzer clean, 46/46 tests.
-- `dart_test.yaml`: 3-minute timeout, the FullPipeline compile checks (`pub get` + `analyze` of each generated client) take ~40 s on Windows.
+- Verified on Dart 3.14 / Flutter 3.50; dependencies refreshed to their latest compatible versions (`args`, `path`, `yaml`, `lints`, `test`). No change to the generated code.
+- README: documents every CLI flag, including `--pure-surface`, `--core-package`, `--emit-target` and `--workspace`. Reminder: since 0.2.17 `resolution: workspace` is opt-in through `--workspace`, so a generated client inside a pub workspace needs that flag.
+- Package hygiene: `analysis_options.yaml` with `package:lints/recommended.yaml`, sources formatted with `dart format`, lint findings fixed (braces in flow control, string interpolation); generator output stays byte-identical (46/46 tests).
+- Tests: `dart_test.yaml` raises the timeout to 3 minutes, because the end-to-end checks run `dart pub get` and `dart analyze` on every generated client.
 
 ## 0.2.17
 

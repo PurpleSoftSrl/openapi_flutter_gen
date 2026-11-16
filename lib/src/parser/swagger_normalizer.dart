@@ -102,7 +102,7 @@ class SwaggerNormalizer {
       if (entry.value is Map<String, dynamic>) {
         final prop = entry.value as Map<String, dynamic>;
         final propName = _toPascalCase(entry.key);
-        final inlineName = '${parentName}$propName';
+        final inlineName = '$parentName$propName';
         final shouldExtract = prop.containsKey('enum') ||
             ((prop['type'] == 'object' || prop.containsKey('properties')) &&
                 !prop.containsKey(r'$ref'));

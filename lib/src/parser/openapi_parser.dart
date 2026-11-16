@@ -115,7 +115,7 @@ class OpenApiSpecParser {
           if (item is! Map<String, dynamic>) continue;
           if (item.containsKey(r'$ref')) continue;
           if (!_isExtractable(item)) continue;
-          final inlineName = '${parentName}Inline${i}';
+          final inlineName = '${parentName}Inline$i';
           if (!_schemasRaw.containsKey(inlineName) &&
               !toAdd.containsKey(inlineName)) {
             toAdd[inlineName] = Map.of(item);
@@ -131,7 +131,7 @@ class OpenApiSpecParser {
       final prop = entry.value as Map<String, dynamic>;
       final items = prop['items'];
       if (items is Map<String, dynamic> && _isExtractable(items)) {
-        final itemsName = '${parentName}${_toPascalCase(entry.key)}Item';
+        final itemsName = '$parentName${_toPascalCase(entry.key)}Item';
         if (!_schemasRaw.containsKey(itemsName) &&
             !toAdd.containsKey(itemsName)) {
           toAdd[itemsName] = Map.of(items);
@@ -148,7 +148,7 @@ class OpenApiSpecParser {
       String parentName,
       Map<String, Map<String, dynamic>> toAdd) {
     final propName = _toPascalCase(propKey);
-    final inlineName = '${parentName}$propName';
+    final inlineName = '$parentName$propName';
     final propNameExists = _schemasRaw.containsKey(propName);
     final inlineNameExists =
         _schemasRaw.containsKey(inlineName) || toAdd.containsKey(inlineName);
@@ -792,16 +792,18 @@ class OpenApiSpecParser {
   }
 
   static bool _isSchemaNullable(Map<String, dynamic> schemaJson) {
-    if (schemaJson.containsKey('nullable') && schemaJson['nullable'] == true)
+    if (schemaJson.containsKey('nullable') && schemaJson['nullable'] == true) {
       return true;
+    }
     final typeRaw = schemaJson['type'];
     if (typeRaw is List && typeRaw.any((t) => t == 'null')) return true;
     if (schemaJson.containsKey('oneOf')) {
       final items = schemaJson['oneOf'] as List<dynamic>?;
       if (items != null) {
         for (final item in items) {
-          if (item is Map<String, dynamic> && item['type'] == 'null')
+          if (item is Map<String, dynamic> && item['type'] == 'null') {
             return true;
+          }
         }
       }
     }
@@ -809,8 +811,9 @@ class OpenApiSpecParser {
       final items = schemaJson['anyOf'] as List<dynamic>?;
       if (items != null) {
         for (final item in items) {
-          if (item is Map<String, dynamic> && item['type'] == 'null')
+          if (item is Map<String, dynamic> && item['type'] == 'null') {
             return true;
+          }
         }
       }
     }

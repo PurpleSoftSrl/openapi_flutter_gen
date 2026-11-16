@@ -307,8 +307,9 @@ class ModelGenerator {
 
     for (final prop in allProps) {
       var rawType = schemaToDartType(prop.schema);
-      if (rawType.endsWith('?'))
+      if (rawType.endsWith('?')) {
         rawType = rawType.substring(0, rawType.length - 1);
+      }
       buf.writeln('    $rawType? ${sanitizeFieldName(prop.name)},');
     }
 
@@ -326,9 +327,9 @@ class ModelGenerator {
     for (final prop in allProps) {
       final fieldName = sanitizeFieldName(prop.name);
       if (allProps.length == 1) {
-        buf.writeln('      ${fieldName}: ${fieldName},');
+        buf.writeln('      $fieldName: $fieldName,');
       } else {
-        buf.writeln('      ${fieldName}: ${fieldName} ?? this.${fieldName},');
+        buf.writeln('      $fieldName: $fieldName ?? this.$fieldName,');
       }
     }
 
@@ -723,7 +724,7 @@ class ModelGenerator {
     if (discValue.isEmpty) return '${parentName}Variant$index';
     final disc = sanitizeClassName(discValue);
     if (disc.startsWith(parentName)) return '${disc}Variant$index';
-    return '${parentName}${disc}Variant$index';
+    return '$parentName${disc}Variant$index';
   }
 
   static String _propertyDartType(IrProperty prop) {
@@ -833,7 +834,9 @@ class ModelGenerator {
         // e.g. a raw List<DateTime> is not JSON-encodable and jsonEncode throws at
         // send time. Reusing _toJsonExpr on the item keeps every type in one place.
         final itemToJson = _toJsonExpr('e', schema.items);
-        return itemToJson == 'e' ? expr : '$expr.map((e) => $itemToJson).toList()';
+        return itemToJson == 'e'
+            ? expr
+            : '$expr.map((e) => $itemToJson).toList()';
       case IrMapSchema():
         if (schema.values is IrObjectSchema || schema.values is IrRefSchema) {
           return '$expr.map((k, v) => MapEntry(k, v.toJson()))';

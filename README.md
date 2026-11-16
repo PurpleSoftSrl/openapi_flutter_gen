@@ -47,7 +47,7 @@ Or add to your project's `dev_dependencies`:
 
 ```yaml
 dev_dependencies:
-  openapi_flutter_gen: ^0.2.17
+  openapi_flutter_gen: ^0.2.18
 ```
 
 ---
@@ -67,13 +67,48 @@ openapi_flutter_gen --spec-url https://api.example.com/swagger/v1/swagger.json -
 ### All flags
 
 ```
--s, --spec          Path to OpenAPI spec (JSON or YAML)
--u, --spec-url      URL to OpenAPI spec
--o, --output        Output directory (default: ./generated)
--p, --package-name  Dart package name (default: api_client)
---use-compute       Generate Isolate.run wrappers for JSON deserialization
---no-isolates       Disable parallel generation
--h, --help          Show usage
+-s, --spec                 Path to the OpenAPI spec file (JSON or YAML)
+-u, --spec-url             URL to the OpenAPI spec file
+-o, --output               Output directory for generated code
+                           (defaults to "./generated")
+-p, --package-name         Dart package name for generated code
+                           (defaults to "api_client")
+    --[no-]no-isolates     Disable isolate-based parallel generation
+    --[no-]use-compute     Generate Isolate.run wrappers for heavy JSON deserialization
+    --[no-]pure-surface    Emit transport-neutral clients over an injected RequestAdapter (pure-surface / Kiota-lite mode) instead of self-contained dio.
+    --core-package         Package name for the shared pure-surface runtime.
+                           (defaults to "purple_openapi_core")
+    --[no-]workspace       Emit `resolution: workspace` in the generated pubspec (for a pub-workspace monorepo). Off by default so the package is standalone and `dart pub get` works without a workspace root.
+    --emit-target          client = generate a client from a spec (default); runtime = emit the purple_openapi_core runtime package.
+                           [client (default), runtime]
+-h, --help                 Show usage
+```
+
+### Pure-surface mode and the shared runtime
+
+By default each generated client is self-contained (its own `dio` transport,
+auth interceptors and `*Result` types). With `--pure-surface` the client only
+builds requests and depends on a shared runtime package (`--core-package`,
+default `purple_openapi_core`) that owns the transport through an injected
+`RequestAdapter`, so several generated clients share one HTTP stack:
+
+```bash
+# 1. Emit the shared runtime package once
+openapi_flutter_gen --emit-target runtime -o ./packages
+# 2. Generate each client against it
+openapi_flutter_gen -s user.json -o ./packages --package-name user_api --pure-surface
+```
+
+### Pub workspaces
+
+Since 0.2.17 the generated `pubspec.yaml` is standalone by default, so
+`dart pub get` works anywhere. Inside a
+[pub workspace](https://dart.dev/tools/pub/workspaces) monorepo pass
+`--workspace` to emit `resolution: workspace` (and list the generated package
+under the root `workspace:`):
+
+```bash
+openapi_flutter_gen -s api.json -o ./packages --package-name my_api --workspace
 ```
 
 ---
