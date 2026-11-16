@@ -220,15 +220,27 @@ void main() {
             'DatesReq': <String, dynamic>{
               'type': 'object',
               'properties': <String, dynamic>{
-                'sourceDate': <String, dynamic>{'type': 'string', 'format': 'date'},
+                'sourceDate': <String, dynamic>{
+                  'type': 'string',
+                  'format': 'date'
+                },
                 'targetDates': <String, dynamic>{
                   'type': 'array',
-                  'items': <String, dynamic>{'type': 'string', 'format': 'date'},
+                  'items': <String, dynamic>{
+                    'type': 'string',
+                    'format': 'date'
+                  },
                 },
-                'createdAt': <String, dynamic>{'type': 'string', 'format': 'date-time'},
+                'createdAt': <String, dynamic>{
+                  'type': 'string',
+                  'format': 'date-time'
+                },
                 'stamps': <String, dynamic>{
                   'type': 'array',
-                  'items': <String, dynamic>{'type': 'string', 'format': 'date-time'},
+                  'items': <String, dynamic>{
+                    'type': 'string',
+                    'format': 'date-time'
+                  },
                 },
               },
             },
@@ -236,8 +248,8 @@ void main() {
         },
       };
       final doc = OpenApiSpecParser(spec).parse();
-      final generated =
-          ModelGenerator.generate(doc.schemas['DatesReq']!, packageName: 'test_api');
+      final generated = ModelGenerator.generate(doc.schemas['DatesReq']!,
+          packageName: 'test_api');
       final c = generated.content;
 
       // date scalar → yyyy-MM-dd (never a full ISO datetime).
@@ -817,13 +829,13 @@ void main() {
 
         // If an AuthInterceptor is emitted in core/interceptors.dart, it must
         // apply the same non-empty guard.
-        final interceptorsFile = File(p.join(coreDir.path, 'interceptors.dart'));
+        final interceptorsFile =
+            File(p.join(coreDir.path, 'interceptors.dart'));
         if (interceptorsFile.existsSync()) {
           final interceptorsContent = interceptorsFile.readAsStringSync();
           if (interceptorsContent.contains('AuthInterceptor')) {
             expect(interceptorsContent, contains('.isNotEmpty'),
-                reason:
-                    'AuthInterceptor must guard the token with isNotEmpty');
+                reason: 'AuthInterceptor must guard the token with isNotEmpty');
           }
         }
       } finally {
@@ -837,7 +849,8 @@ void main() {
     // multipart part must be `MultipartFile.fromBytes(bytes, filename: '<key>')`
     // with NO caller-settable FileName/ContentType sibling fields (locks the
     // reverted experiment). Emitted by model_generator.dart _generateToFormData.
-    test('multipart enum serializes via toJson wire value, binary has no '
+    test(
+        'multipart enum serializes via toJson wire value, binary has no '
         'FileName/ContentType siblings', () {
       final uploadSchema = bmeDoc.schemas['UploadRequest'] as IrObjectSchema;
       final generated =
@@ -865,7 +878,8 @@ void main() {
       expect(content, isNot(contains('FileName')),
           reason: 'no caller-settable FileName sibling field on binary part');
       expect(content, isNot(contains('ContentType')),
-          reason: 'no caller-settable ContentType sibling field on binary part');
+          reason:
+              'no caller-settable ContentType sibling field on binary part');
     });
   });
 
@@ -885,13 +899,15 @@ void main() {
       final c = petsApiFile.content;
 
       // Class ctor takes a RequestAdapter + baseUrl (no dio).
-      expect(c,
-          contains('const PetsApi({required this.adapter, this.baseUrl});'));
+      expect(
+          c, contains('const PetsApi({required this.adapter, this.baseUrl});'));
       expect(c, contains('final RequestAdapter adapter;'));
 
       // Single core import; NO dio import; NO *_result imports.
       expect(
-          c, contains("import 'package:purple_openapi_core/purple_openapi_core.dart';"));
+          c,
+          contains(
+              "import 'package:purple_openapi_core/purple_openapi_core.dart';"));
       expect(c, isNot(contains("import 'package:dio/dio.dart';")),
           reason: 'pure api file must not import dio');
       expect(c, isNot(contains('_result.dart')),
@@ -906,7 +922,8 @@ void main() {
       expect(c, contains('httpMethod: HttpMethod.get,'));
       expect(c, contains("urlTemplate: '/pets/{petId}',"),
           reason: 'urlTemplate keeps {petId} verbatim (Kiota contract)');
-      expect(c, contains("requestInfo.pathParameters['petId'] = petId.toString();"));
+      expect(c,
+          contains("requestInfo.pathParameters['petId'] = petId.toString();"));
       expect(c, contains('return adapter.send(requestInfo, Pet.fromJson);'));
 
       // No dio-transport params leak into the signature.
@@ -921,7 +938,8 @@ void main() {
       expect(c, contains('requestInfo.options.addAll(extra);'));
     });
 
-    test('pure list success uses sendList; body uses setJsonContent; '
+    test(
+        'pure list success uses sendList; body uses setJsonContent; '
         'no-content uses sendNoContent', () {
       final files = ApiGenerator.generateServices(
         {'pets': apiDoc.operationsByTag['pets']!},
@@ -929,13 +947,13 @@ void main() {
         servers: apiDoc.servers,
         pureSurface: true,
       );
-      final c = files
-          .firstWhere((f) => f.path.contains('pets_api.dart'))
-          .content;
+      final c =
+          files.firstWhere((f) => f.path.contains('pets_api.dart')).content;
 
       // listPets → 200 is an array → Future<List<Pet>> + adapter.sendList.
       expect(c, contains('Future<List<Pet>> listPets({'));
-      expect(c, contains('return adapter.sendList(requestInfo, Pet.fromJson);'));
+      expect(
+          c, contains('return adapter.sendList(requestInfo, Pet.fromJson);'));
 
       // createPet → JSON body serialized via setJsonContent(model.toJson()).
       // The body is REQUIRED, so no null-aware `?.` (matches legacy isRequired).
@@ -973,12 +991,16 @@ void main() {
       );
       final c = clientFile.content;
       expect(c, contains('class ApiClient {'));
-      expect(c,
-          contains("import 'package:purple_openapi_core/purple_openapi_core.dart';"));
+      expect(
+          c,
+          contains(
+              "import 'package:purple_openapi_core/purple_openapi_core.dart';"));
       expect(c, contains('ApiClient({required this.adapter, this.baseUrl'));
       expect(c, contains('final RequestAdapter adapter;'));
       expect(
-          c, contains('PetsApi get pets => PetsApi(adapter: adapter, baseUrl: baseUrl);'));
+          c,
+          contains(
+              'PetsApi get pets => PetsApi(adapter: adapter, baseUrl: baseUrl);'));
       // No dio / auth / error-handler / interceptor plumbing in the pure client.
       expect(c, isNot(contains("import 'package:dio/dio.dart';")));
       expect(c, isNot(contains('../core/auth.dart')));
@@ -1006,8 +1028,8 @@ void main() {
         final outputPath = p.join(tempDir.path, 'pure_client');
 
         // Barrel exports the core package, not src/core/* or *_result.
-        final barrel =
-            File(p.join(outputPath, 'lib', 'pure_client.dart')).readAsStringSync();
+        final barrel = File(p.join(outputPath, 'lib', 'pure_client.dart'))
+            .readAsStringSync();
         expect(
             barrel,
             contains(
@@ -1046,16 +1068,16 @@ void main() {
       }
     });
 
-    test('legacy (default) mode stays byte-identical: still emits *Result, '
+    test(
+        'legacy (default) mode stays byte-identical: still emits *Result, '
         'dio import, core/*', () {
       final files = ApiGenerator.generateServices(
         {'pets': apiDoc.operationsByTag['pets']!},
         packageName: 'test_api',
         servers: apiDoc.servers,
       );
-      final c = files
-          .firstWhere((f) => f.path.contains('pets_api.dart'))
-          .content;
+      final c =
+          files.firstWhere((f) => f.path.contains('pets_api.dart')).content;
       // Default path is unchanged: dio import + *Result return types.
       expect(c, contains("import 'package:dio/dio.dart';"));
       expect(c, contains('Future<GetPetResult> getPet({'));
@@ -1086,10 +1108,8 @@ void main() {
         expect(auth, contains('token.trim().isEmpty'),
             reason:
                 'empty/whitespace token must yield no Authorization header');
-        expect(
-            auth,
-            contains(
-                'if (token == null || token.trim().isEmpty) return;'));
+        expect(auth,
+            contains('if (token == null || token.trim().isEmpty) return;'));
 
         // Core surface types are all present.
         final barrel = File(p.join(root, 'lib', 'purple_openapi_core.dart'))

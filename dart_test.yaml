@@ -1,0 +1,3 @@
+# The FullPipeline tests run `dart pub get` + `dart analyze` on each generated
+# client; on Windows that takes ~40 s, over the 30 s default.
+timeout: 3m

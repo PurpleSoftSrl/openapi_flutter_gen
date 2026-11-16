@@ -109,10 +109,11 @@ class ApiErrorInterceptor extends Interceptor {
   }
 
   static GeneratedFile _generateAuth(Map<String, IrSecurityScheme> schemes) {
-    if (schemes.isEmpty)
+    if (schemes.isEmpty) {
       return GeneratedFile(
           path: 'lib/src/core/auth.dart',
           content: '// No security schemes defined\n');
+    }
 
     final buf = StringBuffer(generateFileHeader());
     // HTTP Basic auth encodes credentials via base64Encode/utf8 (dart:convert).
@@ -306,14 +307,16 @@ class ApiErrorInterceptor extends Interceptor {
     // Surface (title + the tags = controllers) FIRST so it survives the pubspec
     // description length cap; then the kind + the do-NOT-hand-edit rule.
     final surface = tags.isEmpty ? info.title : '${info.title} ($tags)';
-    final kind = pureSurface ? 'pure-surface, transport-neutral' : 'self-contained';
+    final kind =
+        pureSurface ? 'pure-surface, transport-neutral' : 'self-contained';
     final description = info.description ??
         'GENERATED $kind Dart client for the $surface — do NOT hand-edit lib/, regenerate from the spec.';
     return GeneratedFile(
       path: 'pubspec.yaml',
       content: pureSurface
-          ? generatePureSurfacePubspecContent(packageName, description,
-              corePackage, usesDio: usesDio, workspace: workspace)
+          ? generatePureSurfacePubspecContent(
+              packageName, description, corePackage,
+              usesDio: usesDio, workspace: workspace)
           : generatePubspecContent(packageName, description,
               workspace: workspace),
     );

@@ -101,8 +101,9 @@ String schemaToSerializeExpr(String valueExpr, IrSchema schema) {
       }
       return valueExpr;
     case IrRefSchema():
-      if (schema.resolved != null)
+      if (schema.resolved != null) {
         return schemaToSerializeExpr(valueExpr, schema.resolved!);
+      }
       return '$valueExpr.toJson()';
   }
 }
@@ -152,8 +153,9 @@ String schemaToDeserializeExpr(String valueExpr, IrSchema schema) {
       }
       return '$valueExpr as Map<String, ${dartTypeFromPrimitive((valSchema as IrPrimitiveSchema).type)}>';
     case IrRefSchema():
-      if (schema.resolved != null)
+      if (schema.resolved != null) {
         return schemaToDeserializeExpr(valueExpr, schema.resolved!);
+      }
       final refName = _sanitizeTypeName(schema.refName);
       return '$refName.fromJson($valueExpr as Map<String, dynamic>)';
   }

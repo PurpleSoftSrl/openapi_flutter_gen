@@ -111,10 +111,8 @@ String sanitizeClassName(String name) => safeDartName(_toPascalCase(name));
 /// (`.../workitems/${type}`); an unescaped `$` triggers Dart interpolation and
 /// either references an undefined member or is a syntax error. Backslash and the
 /// single quote are escaped too so arbitrary keys round-trip literally.
-String escapeDartString(String raw) => raw
-    .replaceAll(r'\', r'\\')
-    .replaceAll(r'$', r'\$')
-    .replaceAll("'", r"\'");
+String escapeDartString(String raw) =>
+    raw.replaceAll(r'\', r'\\').replaceAll(r'$', r'\$').replaceAll("'", r"\'");
 
 String indent(String code, {int level = 1}) {
   final indent = '  ' * level;

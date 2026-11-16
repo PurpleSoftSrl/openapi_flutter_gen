@@ -5,7 +5,7 @@
 /// with zero `build_runner` dependency in generated code.
 ///
 /// Supports OAS 3.x (JSON/YAML) and Swagger 2.0 specs.
-library openapi_flutter_gen;
+library;
 
 export 'src/parser/loader.dart';
 export 'src/parser/openapi_parser.dart';
