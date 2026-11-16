@@ -1,3 +1,8 @@
+## 0.2.18
+
+- Dependencies upgraded for Flutter 3.50 / Dart 3.14 (`dart pub upgrade --major-versions`); analyzer clean, 46/46 tests.
+- `dart_test.yaml`: 3-minute timeout, the FullPipeline compile checks (`pub get` + `analyze` of each generated client) take ~40 s on Windows.
+
 ## 0.2.17
 
 - Fix (allOf composition): composed (`allOf`) models now keep ALL inherited properties from their `$ref`'d base chain at any nesting depth, plus their own — previously every inherited field was silently dropped. Two independent gaps closed: (1) `SwaggerNormalizer` was discarding `allOf`/`oneOf`/`anyOf` entirely when converting Swagger 2.0 definitions, so the parser never saw the composition; (2) the model generator ignored `allOfRefs` (`$ref` bases) and only emitted inline/own props. Now the base chain is resolved (parser links each allOf ref to its target) and merged (generator folds bases-first, own-last, derived wins on name clash). E.g. Azure DevOps `WorkItem` 5→7, `BuildDefinition` 19→38; flat schemas (`GitPullRequest` 35) unchanged.
